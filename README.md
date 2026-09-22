@@ -108,7 +108,7 @@ Intermediate results are saved in the `temp` folder. The `temp`, `download`,
 
 The estimates are modelled heat-related excess deaths rather than counts taken
 directly from 2026 death registrations. The risk model, 2020 population data
-and 2022 regional mortality rates are retained from the original analysis
+and 2024 regional mortality rates are retained from the original analysis
 framework.
 
 The external comparison is descriptive. The model, Grantham Institute and

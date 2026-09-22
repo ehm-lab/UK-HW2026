@@ -91,9 +91,10 @@ names(pop)[-1] <- mapply(paste0, "age", sprintf("%02d", agecut1),
 pop <- pivot_longer(pop, !LSOA11CD, names_to="agegr", values_to="pop") |>
   as.data.frame()
 
-unzip(zipfile="data/deathrates_2022.zip")
-deathrate <- read.csv("data/deathrates_2022.csv")
-file.remove("data/deathrates_2022.csv")
+# unzip(zipfile="data/deathrates_2022.zip")
+# deathrate <- read.csv("data/deathrates_2022.csv")
+# file.remove("data/deathrates_2022.csv")
+deathrate <- read.csv("data/deathrates_2024.csv")
 
 deathrate[, 1] <- unique(pop$agegr)
 names(deathrate)[1] <- "agegr"
