@@ -1,38 +1,116 @@
-# Real-time forecast of temperature-related excess mortality at small-area level
+# UK-HW2026
 
-A illustration of the development of an operational framework for the forecast of excess mortality at small-area level, using a real-data case-study estimating the impact of the July 2022 heatwave in England and Wales
+This repository contains the analysis of heat-related excess mortality in
+England and Wales during summer 2026.
 
-------------------------------------------------------------------------
+The study period is 1 May to 15 September 2026. The analysis estimates daily
+and period-total impacts by age group, region and Lower Layer Super Output Area
+(LSOA). Empirical 95% confidence intervals are calculated where required using
+500 simulations of the temperature-mortality coefficients.
 
-This repository stores the updated R code and data to reproduce the analysis of the case study presented in the article:
+## Temperature input
 
-Mistry MN, Gasparrini A. Real-time forecast of temperature-related excess mortality at small-area level: towards an operational framework. *Environmental Research: Health*. 2024;2:035011. DOI: 10.1088/2752-5309/ad5f51. [[freely available here](https://doi.org/10.1088/2752-5309/ad5f51)]
+The main temperature file is:
 
-This work was supported by the Medical Research Council UK (Grant ID: MR/V034162/1) and the European Commission (H2020-MSCA-IF-2020) under REA grant agreement no. 101022870. 
+    download/LSOA_daily_ERA5_2026_t2m.parquet
 
-### Data
+The file was downloaded through Open-Meteo. It uses ERA5-Land where available
+and ERA5 for coastal LSOAs not covered by ERA5-Land.
 
-The case study presents an analysis on the excess deaths during the July 2022 heatwave over England and Wales, estimated for each of the 34,753 lower layer super-output areas (LSOAs, a small-area census-based definition) and then aggregated at higher geographical units, age groups, and single days. The estimation of excess deaths is based on local age-specific risk functions obtained in previous work (Gasparrini et al. *The Lancet Planetary Health*. 2022;6:e557–e564. DOI: 10.1016/S2542-5196(22)00138-3 [[freely available here](http://www.ag-myresearch.com/2022_gasparrini_lancetplanhealth.html)]). These LSOA-specific risk functions were matched with gridded forecasts of sub-daily mean temperature available from the European Centre for Medium-Range Weather Forecasts (ECMWF) [[link](https://github.com/ecmwf/ecmwf-opendata)] and baseline population and mortality rates retrieved from National Online Manpower Information Service (NOMIS) - Official Labour Market Statistics [[link](https://www.nomisweb.co.uk/)]. Specific references and additional details are provided in the article.
+The file must contain the following variables:
 
-The sub-folder *data* includes a series of files listed below. These files contain data and parameters of the original small-area analysis on temperature-mortality associations that are used here to quantify the excess deaths during the July 2022 heatwave. Details on the study design and statistical methods are provided in the article. The files:
+- `LSOA11CD`: 2011 LSOA code
+- `date`: observation date
+- `t2m`: daily mean temperature in degrees Celsius
 
--  *tmeanfcast.zip*: zipped dataset with the daily mean temperature forecasted for the days 17-22 July 2022 obtained by ECMWF, and extracted from their original gridded format to each LSOA by area-weighted averaging (see the section below about Python code).
--  *population_2020.zip* and *deathrates_2022.zip*: age-specific population distribution for 2020 at LSOA level and mortality rates for 2022 at regional level obtained from NOMIS.
--  *lookup.zip*: zipped dataset containing the lookup table between LSOAs and regions.
--  *coefmeta.RDS* and *vcovmeta.RDS*: coefficients and related (co)variance matrix of the second-stage meta-analytical model used in the original analysis by Gasparrini et al (see reference above) to predict the LSOA and age-specific risk functions.
--  *lsoatmeanper.RDS*, *lsoammtmmp.RDS*, and *lsoacomp.RDS*: LSOA-specific temperature percentiles, estimated minimum mortality temperature and related percentile (MMT and MMP), and values of principal component vulnerability factors. This information is used to reconstruct LSOA and age-specific risk functions.
--  *lsoashp.zip* and *ladshp.zip*: zipped shapefiles representing the geographical boundaries of LSOAs and local authority districs (LADs).
+It must contain one complete observation for every LSOA and date from 1 May to
+15 September 2026. The file is not tracked by Git and must be placed in the
+`download` folder before running the analysis.
 
-### Main code
+The wide LSOA-by-date temperature object created in `01.prep.R` is called
+`tmeandat`.
 
-The four R scripts reproduces all the parts of the forecast analysis and the full results. Details are provided in the article, with comments throughout the scripts describing the specific steps. The scripts:
+## Main analytical periods
 
--   *00.pkg.R* loads the packages.
--   *01.prep.R* loads the datasets and links/assembles them in the right format.
--   *02.fcastcomp.R* performs the forecast computation by looping across LSOAs, specifically: 1) recostructing the design matrix to recover the coefficient/(co)variance matrix of the risk function; 2) calculating the excess mortality in the heatwave days; 3) aggregating accordingly, also computing and adding (empirical) confidence intervals.
--   *03.tables.R* produces the table included in the article with the main aggregated figures.
--   *04.maps.R* produces the maps included in the article, in particular the one illustrating the geographical and temporal distribution of excess deaths.
+The main analysis uses five prespecified broad heatwave periods:
 
-### Code for assembling the temperature data
+1. 22-28 May 2026
+2. 18-28 June 2026
+3. 6-17 July 2026
+4. 29 July-5 August 2026
+5. 11-15 August 2026
 
-The sub-folder *download* provides the Jupiter Notebook script *download_ecmwf_forecast.ipynb* with the Python code to download the gridded temperature forecast data, and aggregate the same to the LSOA boundaries. Note that the code offers an example to retrieve data for the current forecast at 0.25 degrees, as the original database at 0.4 degrees for 2022 is not available anymore, though it can be downloaded from the ECMWF archive as indicated in the code. A pdf and html version of the notebook document in also provided in the the same sub-folder. Separately, an implementation of the LSOA-level data aggregation of daily mean temperature is also provided in the R script *aggregate_ecmwf_forecast.R*.
+These are analytical periods selected to capture the main heat episodes. They
+should not be described as five officially defined national heatwaves. The
+dates are specified in `hwperiod` in `01.prep.R`.
+
+An LSOA-specific heatwave definition is retained as a sensitivity analysis. A
+local heatwave is defined as at least three consecutive days above that LSOA's
+90th percentile of daily mean temperature during the study period.
+
+## Run order
+
+Open `UK-HW2026.Rproj`, then run the scripts in the following order:
+
+    source("00.pkg.R")
+    source("01.prep.R")
+    source("02a.impact_totals.R")
+    source("02b.daily_timeseries.R")
+    source("02c.lsoa_impacts.R")
+    source("03.tables.R")
+    source("04.maps.R")
+    source("05.external_comparison.R")
+
+Run the three `02` scripts sequentially. Each script uses parallel processing,
+so running them simultaneously would cause unnecessary competition for CPU and
+memory.
+
+## Script descriptions
+
+- `00.pkg.R` loads the required packages and creates output folders.
+- `01.prep.R` prepares model parameters, population, mortality, temperature,
+  geography and heatwave-period data.
+- `02a.impact_totals.R` calculates study-period and event totals by region and
+  age group, including empirical 95% confidence intervals.
+- `02b.daily_timeseries.R` calculates daily England-and-Wales results by age
+  group and an England all-age series for comparison with UKHSA.
+- `02c.lsoa_impacts.R` calculates daily and period-total LSOA point estimates
+  for mapping.
+- `03.tables.R` creates national and regional tables and the combined daily
+  mortality-temperature figure.
+- `04.maps.R` creates the study-period map, five-period maps and maps for the
+  hottest consecutive week in July.
+- `05.external_comparison.R` descriptively compares the model estimates with
+  published Grantham Institute and UKHSA estimates over matching periods and
+  geographical areas.
+
+## Main outputs
+
+Tables:
+
+- `tables/total_age_2026.csv`
+- `tables/study_region_age_wide_2026.csv`
+- `tables/daily_age_2026.csv`
+- `tables/external_comparison_2026.csv`
+
+Figures:
+
+- `figures/Fig1_daily_mort_t2m_2026.png`
+- `figures/Fig2_map_lsoamort_2026.png`
+- `figures/Fig3_map_five_hw_2026.png`
+- `figures/Fig4_map_hottest_days_jul2026.png`
+- `figures/external_comparison_2026.png`
+
+Intermediate results are saved in the `temp` folder. The `temp`, `download`,
+`tables` and `figures` folders are excluded from Git.
+
+## Interpretation
+
+The estimates are modelled heat-related excess deaths rather than counts taken
+directly from 2026 death registrations. The risk model, 2020 population data
+and 2022 regional mortality rates are retained from the original analysis
+framework.
+
+The external comparison is descriptive. The model, Grantham Institute and
+UKHSA estimates use different methods, geographical coverage and definitions
+and should not be interpreted as directly equivalent estimates.
