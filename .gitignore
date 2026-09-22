@@ -5,10 +5,6 @@ download/
 tables/
 figures/
 Malcolm2025/
-data - Copy/
-figures - Copy/
-tables - Copy/
-temp - Copy/
 
 # History files
 .Rhistory
@@ -60,6 +56,4 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-.DS_Store
 note.txt
-data/tmeanfcast.zip
