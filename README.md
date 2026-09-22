@@ -24,8 +24,8 @@ The file must contain the following variables:
 - `t2m`: daily mean temperature in degrees Celsius
 
 It must contain one complete observation for every LSOA and date from 1 May to
-15 September 2026. The file is not tracked by Git and must be placed in the
-`download` folder before running the analysis.
+15 September 2026. The temperature file is included in the repository under the
+download folder.
 
 The wide LSOA-by-date temperature object created in `01.prep.R` is called
 `tmeandat`.
