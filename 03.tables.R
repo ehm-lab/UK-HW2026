@@ -35,6 +35,7 @@ tabnat$rate <- tabnat$estimate/tabnat$population*10^6
 tabnat$ratelow <- tabnat$lower/tabnat$population*10^6
 tabnat$ratehigh <- tabnat$upper/tabnat$population*10^6
 
+# Save cumulative excess deaths per million output
 write.csv(tabnat, "tables/total_age_2026.csv", row.names=F)
 
 # 75+
@@ -100,7 +101,57 @@ tabtotal <- pivot_wider(tabtotal[c("region", "age", "result")],
 # Match the columns before adding the Total row.
 tabtotal <- tabtotal[names(tabwide)]
 tabwide <- rbind(tabwide, tabtotal)
-write.csv(tabwide,"tables/study_region_age_wide_2026.csv",row.names=F)
+write.csv(tabwide,"tables/TableS1_region_age_2026.csv",row.names=F)
+
+################################################################################
+# CREATE SUMMARY TABLE
+
+# Regions are all-age estimates for the complete study period.
+regsum <- subset(tabreg, period == periodlab & agegr == "all")
+regsum <- regsum[match(regname, regsum$region), ]
+regsum$section <- "Region"
+regsum$group <- regsum$region
+
+# Age groups cover all regions for the complete study period.
+agesum <- subset(tabnat, period == periodlab & agegr != "all")
+agesum <- agesum[match(agevarlab, agesum$agegr), ]
+agesum$section <- "Age group"
+agesum$group <- agesum$age
+
+# Heat episodes cover all regions and age groups.
+eventsum <- subset(tabnat, period != periodlab & agegr == "all")
+eventsum <- eventsum[match(hwperiod$label, eventsum$period), ]
+eventsum$section <- "Prespecified heat episode"
+eventsum$group <- paste0(hwperiod$event, ": ",
+  format(hwperiod$start, "%d %B"), " to ",
+  format(hwperiod$end, "%d %B"))
+
+# The final row is the all-region and all-age study-period total.
+totalsum <- subset(tabnat, period == periodlab & agegr == "all")
+totalsum$section <- "Total (all regions and age groups)"
+totalsum$group <- periodlab
+
+sumvar <- c("section", "group", "population", "estimate", "lower",
+  "upper", "rate", "ratelow", "ratehigh")
+tabsum <- rbind(regsum[sumvar], agesum[sumvar], eventsum[sumvar],
+  totalsum[sumvar])
+
+tabsum$population <- formatC(tabsum$population, format="f", big.mark=",",
+  digits=0)
+tabsum$deaths <- paste0(
+  formatC(tabsum$estimate, format="f", big.mark=",", digits=0), " (",
+  formatC(tabsum$lower, format="f", big.mark=",", digits=0), " to ",
+  formatC(tabsum$upper, format="f", big.mark=",", digits=0), ")")
+tabsum$burden <- paste0(
+  formatC(tabsum$rate, format="f", big.mark=",", digits=1), " (",
+  formatC(tabsum$ratelow, format="f", big.mark=",", digits=1), " to ",
+  formatC(tabsum$ratehigh, format="f", big.mark=",", digits=1), ")")
+
+tabout <- tabsum[c("section", "group", "population", "deaths", "burden")]
+names(tabout) <- c("Section", "Group", "Population", "Excess deaths (95% eCI)",
+  "Excess deaths per million population (95% eCI)")
+
+write.csv(tabout, "tables/Table1_summary_2026.csv", row.names=F)
 
 ################################################################################
 # CREATE DAILY NATIONAL TABLE

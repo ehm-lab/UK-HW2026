@@ -28,10 +28,12 @@ getmodel <- function(periods, geography) {
     stop("An external comparison period is outside the modelled dates")
   
   if(geography == "England and Wales") {
-    values <- apply(dayage["all", dayid, , drop=FALSE], 3, sum)
+    values <- apply(dayage["all", dayid, , drop=F], 3, sum)
   } else if(geography == "England") {
     values <- colSums(dayeng[dayid, , drop=F])
-  } else {stop("Unknown comparison geography")}
+  } else {
+    stop("Unknown comparison geography")
+    }
   
   c(estimate=unname(values[1]),
     lower=unname(quantile(values[-1], 0.025, names=F)),
@@ -39,11 +41,10 @@ getmodel <- function(periods, geography) {
 }
 
 oneperiod <- function(start, end) 
-  data.frame(start=as.Date(start),end=as.Date(end))
+  data.frame(start=as.Date(start), end=as.Date(end))
 
 twoperiod <- function(start1, end1, start2, end2) 
   data.frame(start=as.Date(c(start1, start2)), end=as.Date(c(end1, end2)))
-
 
 ################################################################################
 # ENTER PUBLISHED ESTIMATES
@@ -130,39 +131,67 @@ comptab <- rbindlist(lapply(compspec, function(x) {
 write.csv(comptab,"tables/external_comparison_2026.csv",row.names=FALSE)
 
 ################################################################################
-# PLOT COMPARISON
+# CREATE READER-FACING COMPARISON TABLE
 
-modelplot <- data.frame(
-  comparison=comptab$comparison,
-  source="UK-HW2026 model",
-  estimate=comptab$model,
-  lower=comptab$modellower,
-  upper=comptab$modelupper)
+# Keep geography and dates visible because the external estimates differ
+table2 <- data.frame(source=ifelse(grepl("^Grantham",comptab$comparison),
+  "Grantham Institute","UKHSA"), episode=sub("^[^:]+: ","",comptab$comparison),
+  geography=comptab$geography,dates=comptab$dates,stringsAsFactors=F)
 
-publishedplot <- data.frame(
-  comparison=comptab$comparison,
-  source="Published rapid estimate",
-  estimate=comptab$published,
-  lower=comptab$publishedlower,
-  upper=comptab$publishedupper)
+table2$model <- paste0(
+  formatC(comptab$model, format="f", big.mark=",", digits=0), " (",
+  formatC(comptab$modellower, format="f", big.mark=",", digits=0), " to ",
+  formatC(comptab$modelupper, format="f", big.mark=",", digits=0), ")")
 
-plotdat <- rbind(modelplot, publishedplot)
-plotdat$comparison <- factor(plotdat$comparison,levels=rev(comptab$comparison))
+table2$published <- formatC(comptab$published,format="f",big.mark=",",digits=0)
+hasci <- !is.na(comptab$publishedlower) & !is.na(comptab$publishedupper)
+table2$published[hasci] <- paste0(
+  formatC(comptab$published[hasci],format="f",big.mark=",", digits=0)," (",
+  formatC(comptab$publishedlower[hasci],format="f",big.mark=",",digits=0)," to ",
+  formatC(comptab$publishedupper[hasci],format="f",big.mark=",",digits=0),")")
 
-pcompare <- ggplot(plotdat, aes(x=comparison, y=estimate, colour=source)) +
-  geom_errorbar(aes(ymin=lower, ymax=upper),position=position_dodge(width=0.55),
-    width=0.18,linewidth=0.5, na.rm=TRUE) +
-  geom_point(position=position_dodge(width=0.55), size=2.4) +
-  coord_flip() +
-  scale_colour_manual(
-    values=c("UK-HW2026 model"="firebrick","Published rapid estimate"="black")) +
-  labs(x=NULL,y="Heat-related excess deaths",colour=NULL,
-    title="Comparison with published rapid heat-mortality estimates",
-    subtitle=paste0("Model 95% CIs are shown for every comparison; ",
-      "published CIs are shown where available")) +
-  theme_bw() +
-  theme(panel.grid.minor=element_blank(), legend.position="bottom")
+names(table2) <- c("Source", "Heat episode", "Geography", "Dates", 
+  "UK-HW2026 model (95% eCI)", "Published rapid estimate (95% CI)")
 
-print(pcompare)
-ggsave("figures/external_comparison_2026.png",pcompare, 
-  width=10, height=6.5, dpi=300)
+write.csv(table2, "tables/Table2_external_comparison_2026.csv", row.names=F)
+
+# table note: model estimates use the geography and dates shown.
+# Grantham 95% uncertainty intervals were not reported. 
+# Comparisons are descriptive because the methods differ between assessments.
+
+# ################################################################################
+# # PLOT COMPARISON
+# 
+# modelplot <- data.frame(
+#   comparison=comptab$comparison,
+#   source="UK-HW2026 model",
+#   estimate=comptab$model,
+#   lower=comptab$modellower,
+#   upper=comptab$modelupper)
+# 
+# publishedplot <- data.frame(
+#   comparison=comptab$comparison,
+#   source="Published rapid estimate",
+#   estimate=comptab$published,
+#   lower=comptab$publishedlower,
+#   upper=comptab$publishedupper)
+# 
+# plotdat <- rbind(modelplot, publishedplot)
+# plotdat$comparison <- factor(plotdat$comparison,levels=rev(comptab$comparison))
+# 
+# pcompare <- ggplot(plotdat, aes(x=comparison, y=estimate, colour=source)) +
+#   geom_errorbar(aes(ymin=lower, ymax=upper),position=position_dodge(width=0.55),
+#     width=0.18,linewidth=0.5, na.rm=TRUE) +
+#   geom_point(position=position_dodge(width=0.55), size=2.4) +
+#   coord_flip() +
+#   scale_colour_manual(
+#     values=c("UK-HW2026 model"="firebrick","Published rapid estimate"="black")) +
+#   labs(x=NULL,y="Heat-related excess deaths",colour=NULL,
+#     title="Comparison with published rapid heat-mortality estimates",
+#     subtitle=paste0("Model 95% CIs are shown for every comparison; ",
+#       "published CIs are shown where available")) +
+#   theme_bw() +
+#   theme(panel.grid.minor=element_blank(), legend.position="bottom")
+# 
+# print(pcompare)
+# ggsave("figures/FigS3_ext_comparison.png",pcompare,width=10,height=6.5,dpi=300)

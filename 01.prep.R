@@ -10,12 +10,12 @@
 # Open UK-HW2026.Rproj before running this script.
 datestart <- as.Date("2026-05-01")
 dateend <- as.Date("2026-09-15")
-hwprob <- 0.90
-hwminday <- 3
 nsim <- 500
 ncore <- max(1, min(4, parallel::detectCores()-2))
 chunksize <- 100
-nmapday <- 6
+# hwprob <- 0.90
+# hwminday <- 3
+# nmapday <- 6
 
 # five prespecified heatwave periods
 hwperiod <- data.frame(event=paste0("HW", 1:5),
@@ -216,55 +216,54 @@ parobj <- c(
   "hwperiod", "periodlab", "regcode", "lsoareg"
 )
 
-################################################################################
-# DEFINE LOCAL HEATWAVES FOR THE SENSITIVITY ANALYSIS
-
-# Each LSOA uses its own study-period percentile and event dates.
-tempmat <- as.matrix(tmeandat[-1])
-hwcut <- apply(tempmat, 1, quantile, probs = hwprob, na.rm = T, names = F)
-
-hwday <- matrix(FALSE,nrow=nrow(tempmat), ncol=ncol(tempmat),
-  dimnames=list(listlsoa, as.character(dates)))
-hwnevent <- integer(length(listlsoa))
-hwperiods <- vector("list", length(listlsoa))
-
-for(i in seq_along(listlsoa)) {
-  above <- !is.na(tempmat[i, ]) & tempmat[i, ] > hwcut[i]
-  runs <- rle(above)
-  runend <- cumsum(runs$lengths)
-  runstart <- runend-runs$lengths+1
-  valid <- which(runs$values & runs$lengths >= hwminday)
-  
-  if(length(valid)) {
-    hwnevent[i] <- length(valid)
-    hwperiods[[i]] <- data.frame(LSOA11CD=listlsoa[i], event=seq_along(valid),
-      start=dates[runstart[valid]], end=dates[runend[valid]],
-      ndays=runs$lengths[valid], threshold=round(hwcut[i], 2))
-    
-    for(k in seq_along(valid)) {
-      index <- seq(runstart[valid[k]], runend[valid[k]])
-      hwday[i, index] <- TRUE
-    }
-  }
-}
-
-hwperiods <- rbindlist(hwperiods)
-
-if(!nrow(hwperiods)) {
-  hwperiods <- data.table(LSOA11CD=character(), event=integer(),
-    start=as.Date(character()), end=as.Date(character()),
-    ndays=integer(), threshold=numeric())
-}
-
-hwlsoa <- data.frame(LSOA11CD=listlsoa,threshold=round(hwcut, 2),
-  nevent=hwnevent,ndays=rowSums(hwday))
-
-hwdatesum <- data.frame(date=dates, nlsoa=colSums(hwday),
-  proportion=colMeans(hwday))
-
-write.csv(hwlsoa, "tables/hwdef_lsoa_2026.csv", row.names=F)
-write.csv(hwperiods, "tables/hwperiod_lsoa_2026.csv", row.names=F)
-# write.csv(hwdatesum, "tables/hwday_summary_2026.csv", row.names=F)
-saveRDS(hwday, "temp/hwday_lsoa_2026.rds")
-
-rm(tempmat)
+# ################################################################################
+# # DEFINE LOCAL HEATWAVES FOR THE SENSITIVITY ANALYSIS
+# 
+# # Each LSOA uses its own study-period percentile and event dates.
+# tempmat <- as.matrix(tmeandat[-1])
+# hwcut <- apply(tempmat, 1, quantile, probs = hwprob, na.rm = T, names = F)
+# 
+# hwday <- matrix(FALSE,nrow=nrow(tempmat), ncol=ncol(tempmat),
+#   dimnames=list(listlsoa, as.character(dates)))
+# hwnevent <- integer(length(listlsoa))
+# hwperiods <- vector("list", length(listlsoa))
+# 
+# for(i in seq_along(listlsoa)) {
+#   above <- !is.na(tempmat[i, ]) & tempmat[i, ] > hwcut[i]
+#   runs <- rle(above)
+#   runend <- cumsum(runs$lengths)
+#   runstart <- runend-runs$lengths+1
+#   valid <- which(runs$values & runs$lengths >= hwminday)
+#   
+#   if(length(valid)) {
+#     hwnevent[i] <- length(valid)
+#     hwperiods[[i]] <- data.frame(LSOA11CD=listlsoa[i], event=seq_along(valid),
+#       start=dates[runstart[valid]], end=dates[runend[valid]],
+#       ndays=runs$lengths[valid], threshold=round(hwcut[i], 2))
+#     
+#     for(k in seq_along(valid)) {
+#       index <- seq(runstart[valid[k]], runend[valid[k]])
+#       hwday[i, index] <- TRUE
+#     }
+#   }
+# }
+# 
+# hwperiods <- rbindlist(hwperiods)
+# 
+# if(!nrow(hwperiods)) {
+#   hwperiods <- data.table(LSOA11CD=character(), event=integer(),
+#     start=as.Date(character()), end=as.Date(character()),
+#     ndays=integer(), threshold=numeric())
+# }
+# 
+# hwlsoa <- data.frame(LSOA11CD=listlsoa,threshold=round(hwcut, 2),
+#   nevent=hwnevent,ndays=rowSums(hwday))
+# 
+# hwdatesum <- data.frame(date=dates, nlsoa=colSums(hwday),
+#   proportion=colMeans(hwday))
+# 
+# write.csv(hwlsoa, "tables/hwdef_lsoa_2026.csv", row.names=F)
+# write.csv(hwperiods, "tables/hwperiod_lsoa_2026.csv", row.names=F)
+# saveRDS(hwday, "temp/hwday_lsoa_2026.rds")
+# 
+# rm(tempmat)
