@@ -33,15 +33,14 @@ saveRDS(daylsoa, "temp/daylsoa_2026.rds")
 ################################################################################
 # CALCULATE STUDY-PERIOD LSOA RESULTS
 
-totstudy <- rowSums(daylsoa)
-tothwsens <- rowSums(daylsoa*hwday)
+# totstudy <- rowSums(daylsoa)
+totstudy <- pmax(rowSums(daylsoa), 0)
 
 popdat <- subset(basedat, agegr == "all")
 popall <- popdat$pop[match(listlsoa, popdat$LSOA11CD)]
 
 lsoatab <- data.frame(LSOA11CD=listlsoa,population=popall,eststudy=totstudy,
-  ratestudy=totstudy/popall*10^6, esthwsens=tothwsens,
-  ratehwsens=tothwsens/popall*10^6)
+  ratestudy=totstudy/popall*10^6)
 
 write.csv(lsoatab, "tables/lsoa_period_2026.csv", row.names=F)
 

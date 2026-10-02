@@ -31,9 +31,7 @@ getmodel <- function(periods, geography) {
     values <- apply(dayage["all", dayid, , drop=F], 3, sum)
   } else if(geography == "England") {
     values <- colSums(dayeng[dayid, , drop=F])
-  } else {
-    stop("Unknown comparison geography")
-    }
+  }
   
   c(estimate=unname(values[1]),
     lower=unname(quantile(values[-1], 0.025, names=F)),
@@ -49,10 +47,10 @@ twoperiod <- function(start1, end1, start2, end2)
 ################################################################################
 # ENTER PUBLISHED ESTIMATES
 
-granthamurl <- paste0(
-  "https://www.metoffice.gov.uk/about-us/news-and-media/",
-  "media-centre/weather-and-climate-news/2026/",
-  "more-than-2700-excess-deaths-estimated-in-england-and-wales")
+# granthamurl <- paste0("https://www.metoffice.gov.uk/about-us/news-and-media/",
+#   "media-centre/weather-and-climate-news/2026/",
+#   "more-than-2700-excess-deaths-estimated-in-england-and-wales")
+granthamurl <- "https://doi.org/10.25560/131199"
 
 ukhsaurl <- paste0(
   "https://www.gov.uk/government/publications/",
@@ -65,18 +63,18 @@ compspec <- list(
     geography="England and Wales",
     dates="21-29 May 2026",
     periods=oneperiod("2026-05-21", "2026-05-29"),
-    estimate=550,
-    lower=NA_real_,
-    upper=NA_real_,
-    source="Grantham Institute rapid attribution estimate",
+    estimate=553,
+    lower=426,
+    upper=704,
+    source="Barnes et al. rapid attribution estimate",
     url=granthamurl),
   list(
     comparison="Grantham: June heat episode",
     geography="England and Wales",
     dates="18-28 June 2026",
     periods=oneperiod("2026-06-18", "2026-06-28"),
-    estimate=2200, lower=NA_real_, upper=NA_real_,
-    source="Grantham Institute rapid attribution estimate",
+    estimate=2183, lower=1582, upper=2724,
+    source="Barnes et al. rapid attribution estimate",
     url=granthamurl
   ),
   list(
@@ -109,24 +107,24 @@ compspec <- list(
 # CREATE COMPARISON TABLE
 
 comptab <- rbindlist(lapply(compspec, function(x) {
-    model <- getmodel(x$periods, x$geography)
-    
-    data.frame(
-      comparison=x$comparison,
-      geography=x$geography,
-      dates=x$dates,
-      model=model["estimate"],
-      modellower=model["lower"],
-      modelupper=model["upper"],
-      published=x$estimate,
-      publishedlower=x$lower,
-      publishedupper=x$upper,
-      difference=model["estimate"]-x$estimate,
-      ratio=model["estimate"]/x$estimate,
-      source=x$source,
-      url=x$url,
-      stringsAsFactors=F)
-    }), fill=T) |>  as.data.frame()
+  model <- getmodel(x$periods, x$geography)
+  
+  data.frame(
+    comparison=x$comparison,
+    geography=x$geography,
+    dates=x$dates,
+    model=model["estimate"],
+    modellower=model["lower"],
+    modelupper=model["upper"],
+    published=x$estimate,
+    publishedlower=x$lower,
+    publishedupper=x$upper,
+    difference=model["estimate"]-x$estimate,
+    ratio=model["estimate"]/x$estimate,
+    source=x$source,
+    url=x$url,
+    stringsAsFactors=F)
+}), fill=T) |>  as.data.frame()
 
 write.csv(comptab,"tables/external_comparison_2026.csv",row.names=FALSE)
 
@@ -135,8 +133,8 @@ write.csv(comptab,"tables/external_comparison_2026.csv",row.names=FALSE)
 
 # Keep geography and dates visible because the external estimates differ
 table2 <- data.frame(source=ifelse(grepl("^Grantham",comptab$comparison),
-  "Grantham Institute","UKHSA"), episode=sub("^[^:]+: ","",comptab$comparison),
-  geography=comptab$geography,dates=comptab$dates,stringsAsFactors=F)
+  "Barnes et al.","UKHSA"), geography=comptab$geography,episode=sub("^[^:]+: ",
+    "",comptab$comparison),dates=comptab$dates,stringsAsFactors=F)
 
 table2$model <- paste0(
   formatC(comptab$model, format="f", big.mark=",", digits=0), " (",
@@ -150,13 +148,12 @@ table2$published[hasci] <- paste0(
   formatC(comptab$publishedlower[hasci],format="f",big.mark=",",digits=0)," to ",
   formatC(comptab$publishedupper[hasci],format="f",big.mark=",",digits=0),")")
 
-names(table2) <- c("Source", "Heat episode", "Geography", "Dates", 
+names(table2) <- c("Source", "Geography", "Heat episode", "Dates", 
   "UK-HW2026 model (95% eCI)", "Published rapid estimate (95% CI)")
-
-write.csv(table2, "tables/Table2_external_comparison_2026.csv", row.names=F)
+write.csv(table2, "tables/TableS1_external_comparison_2026.csv", row.names=F)
 
 # table note: model estimates use the geography and dates shown.
-# Grantham 95% uncertainty intervals were not reported. 
+# Barnes et al. reported eCIs; UKHSA reported CIs.
 # Comparisons are descriptive because the methods differ between assessments.
 
 # ################################################################################

@@ -212,7 +212,7 @@ chunks <- split(seq_along(listlsoa), ceiling(seq_along(listlsoa) / chunksize))
 parobj <- c(
   "lsoaeffect", "agevarlab", "lsoatmeanper", "varfun", "varper",
   "vardegree", "lsoacomp", "coefmeta", "vardf", "tmeandat",
-  "basedat", "listlsoa", "dates", "nsim", "simcoef", "hwday",
+  "basedat", "listlsoa", "dates", "nsim", "simcoef",
   "hwperiod", "periodlab", "regcode", "lsoareg"
 )
 

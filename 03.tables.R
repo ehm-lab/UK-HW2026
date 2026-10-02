@@ -42,8 +42,18 @@ write.csv(tabnat, "tables/total_age_2026.csv", row.names=F)
 age75sim <- colSums(natage[c("age7584", "age85plus"), periodlab, ])
 age75est <- age75sim["est"]
 age75ci <- quantile(age75sim[-1], c(0.025, 0.975), names = FALSE)
+age75pop <- sum(tabnat$population[tabnat$period == periodlab &
+    tabnat$agegr %in% c("age7584", "age85plus")])
 allest <- tabnat$estimate[tabnat$period == periodlab & tabnat$agegr == "all"]
 age75pct <- age75est/allest*100
+
+age75tab <- data.frame(
+  agegr="age75plus",period=periodlab,age="75 and above",population=age75pop,
+  estimate=unname(age75est),lower=age75ci[1],upper=age75ci[2],
+  rate=unname(age75est)/age75pop*10^6,ratelow=age75ci[1]/age75pop*10^6,
+  ratehigh=age75ci[2]/age75pop*10^6,proportion=unname(age75pct))
+write.csv(age75tab, "tables/total_age75plus_2026.csv", row.names=F)
+
 sprintf(paste0("People aged 75+ accounted for %.0f deaths (95%%eCI %.0f–%.0f), ",
     "representing %.1f%% of the total."),age75est,age75ci[1],age75ci[2],age75pct)
 
@@ -101,7 +111,7 @@ tabtotal <- pivot_wider(tabtotal[c("region", "age", "result")],
 # Match the columns before adding the Total row.
 tabtotal <- tabtotal[names(tabwide)]
 tabwide <- rbind(tabwide, tabtotal)
-write.csv(tabwide,"tables/TableS1_region_age_2026.csv",row.names=F)
+write.csv(tabwide,"tables/TableS2_region_age_2026.csv",row.names=F)
 
 ################################################################################
 # CREATE SUMMARY TABLE
@@ -230,9 +240,10 @@ pfigure <- patchwork::wrap_plots(pmort, ptemp, patchwork::guide_area(), ncol=1,
   heights=c(2, 1, 0.15),guides="collect") +
   patchwork::plot_annotation(
     title=paste0("Heat-related excess mortality and national mean temperature, ",
-      "summer 2026"),
-    caption=paste0("National mean temperature is calculated as the daily mean ",
-      "across all LSOAs. Gold shading indicates the five heatwave periods."))
+      "summer 2026")
+    # ,caption=paste0("National mean temperature is calculated as the daily mean ",
+    #   "across all LSOAs. Gold shading indicates the five heatwave periods.")
+    )
 
 print(pfigure)
 ggsave("figures/Fig1_daily_mort_t2m_2026.png",pfigure,width=11, height=8, dpi=300)

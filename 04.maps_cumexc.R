@@ -8,6 +8,8 @@
 
 daylsoa <- readRDS("temp/daylsoa_2026.rds")
 lsoatab <- read.csv("tables/lsoa_period_2026.csv")
+daydate <- as.Date(colnames(daylsoa))
+totlab <- paste0("Total: ", "1 May-15 Sep")
 
 ladmap <- merge(ladshp,unique(lookup[c("LAD11CD","RGN11CD")]), by="LAD11CD",
   sort=F)
@@ -28,7 +30,7 @@ eventdat$LSOA11CD <- as.character(eventdat$LSOA11CD)
 eventdat$heatwave <- factor(as.character(eventdat$heatwave),levels=hwperiod$label)
 eventdat <- merge(eventdat, lsoatab[c("LSOA11CD", "population")], by="LSOA11CD")
 eventdat$rate <- eventdat$estimate/eventdat$population*10^6
-# write.csv(eventdat,"tables/lsoa_hw_2026.csv",row.names=FALSE)
+# write.csv(eventdat,"tables/lsoa_hw_2026.csv",row.names=F)
 
 # Set pale-yellow to dark-red palette
 colval <- c("white",colorRampPalette(c("yellow", "orange", "red", "red4"))(11))
@@ -36,7 +38,6 @@ colval <- c("white",colorRampPalette(c("yellow", "orange", "red", "red4"))(11))
 ################################################################################ 
 # MAP FIVE HEATWAVE PERIODS AND THE COMPLETE STUDY PERIOD
 
-totlab <- paste0("Total: ", periodlab) 
 eventplot <- data.frame(LSOA11CD=eventdat$LSOA11CD,
   period=as.character(eventdat$heatwave), rate=eventdat$rate)
 studyplot <- data.frame(LSOA11CD=lsoatab$LSOA11CD,period=totlab,
@@ -80,4 +81,4 @@ pmap <- ggplot(plotmap) +
     #, subtitle=paste0("Five prespecified heat episodes and total for ",periodlab)
   )
 print(pmap) 
-ggsave("figures/Fig2_map_hw_total_2026.png", pmap, width=14, height=9, dpi=300) 
+ggsave("figures/FigS1_map_cumexc_2026.png", pmap, width=14, height=9, dpi=300) 
