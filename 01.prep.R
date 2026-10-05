@@ -2,7 +2,6 @@
 # UK-HW2026: 2026 SUMMER HEAT-RELATED EXCESS MORTALITY
 # SCRIPT 01: PREPARE MODEL, POPULATION, TEMPERATURE AND GEOGRAPHY DATA
 ################################################################################
-# setwd("V:/VolumeQ/AGteam/projects/UK-HWfcast")
 
 ################################################################################
 # SET ANALYSIS OPTIONS
