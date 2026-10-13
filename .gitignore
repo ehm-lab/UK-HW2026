@@ -1,10 +1,6 @@
 # Folders
 temp/
 getdata/
-download/
-tables/
-figures/
-Malcolm2025/
 
 # History files
 .Rhistory
@@ -46,6 +42,7 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+.env
 
 # pkgdown site
 docs/
@@ -57,3 +54,10 @@ po/*~
 rsconnect/
 
 note.txt
+
+# Local review archives
+/*.zip
+
+# Python cache files
+__pycache__/
+*.pyc

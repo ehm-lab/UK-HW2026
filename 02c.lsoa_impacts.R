@@ -1,6 +1,6 @@
 ################################################################################
 # UK-HW2026: 2026 SUMMER HEAT-RELATED EXCESS MORTALITY
-# SCRIPT 02C: CALCULATE DAILY AND PERIOD RESULTS BY LSOA
+# SCRIPT 02C: CALCULATE DAILY LSOA POINT ESTIMATES
 ################################################################################
 
 ################################################################################
@@ -30,19 +30,5 @@ stopCluster(cl)
 dimnames(daylsoa) <- list(listlsoa, as.character(dates))
 saveRDS(daylsoa, "temp/daylsoa_2026.rds")
 
-################################################################################
-# CALCULATE STUDY-PERIOD LSOA RESULTS
-
-# totstudy <- rowSums(daylsoa)
-totstudy <- pmax(rowSums(daylsoa), 0)
-
-popdat <- subset(basedat, agegr == "all")
-popall <- popdat$pop[match(listlsoa, popdat$LSOA11CD)]
-
-lsoatab <- data.frame(LSOA11CD=listlsoa,population=popall,eststudy=totstudy,
-  ratestudy=totstudy/popall*10^6)
-
-write.csv(lsoatab, "tables/lsoa_period_2026.csv", row.names=F)
-
-rm(simcoef, popdat)
+rm(simcoef)
 gc()

@@ -6,7 +6,7 @@
 ################################################################################
 # SAMPLE MODEL COEFFICIENTS
 
-# Use the same seed as script 02A.
+# Use the same seed as script 02a.
 set.seed(13041975)
 simcoef <- mvrnorm(nsim, coefmeta, vcovmeta)
 
