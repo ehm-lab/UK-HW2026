@@ -3,6 +3,7 @@
 ################################################################################
 
 # LOAD PACKAGES
+library(readxl); library(lubridate); library(mgcv)
 library(dlnm); library(mixmeta)
 library(data.table)
 library(dplyr) ; library(tidyr); library(tibble) ; library(lubridate)
@@ -10,7 +11,6 @@ library(foreach) ; library(doParallel)
 library(MASS)
 library(abind)
 library(ggplot2) ; library(sf); library(patchwork)
-# library(rmapshaper) ; library(ggspatial)
 library(arrow)
 
 # OUTPUT FOLDERS

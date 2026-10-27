@@ -136,7 +136,7 @@ fig_tmax <- (ptmax_distribution/pgt30) +
 
 print(fig_tmax)
 ggsave("figures/FigS1_temperature_extremes_2026.png", fig_tmax,
-  width=9, height=7, units="in", dpi=600)
+  width=9, height=7, units="in", dpi=1200)
 
 # Print manuscript exposure statistics and remove the full input data
 print(exposure_summary)

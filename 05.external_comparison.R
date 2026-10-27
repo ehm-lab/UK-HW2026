@@ -11,10 +11,11 @@ dayage <- readRDS("temp/dayage_2026.rds")
 dayeng <- readRDS("temp/dayeng_2026.rds")
 
 # Parse stored date labels
-daytxt <- dimnames(dayage)$date
-daydate <- suppressWarnings(as.Date(daytxt))
-needfmt <- is.na(daydate)
-daydate[needfmt] <- as.Date(daytxt[needfmt], format="%d %B %Y")
+daydate <- as.Date(dimnames(dayage)$date)
+# daytxt <- dimnames(dayage)$date
+# daydate <- suppressWarnings(as.Date(daytxt))
+# needfmt <- is.na(daydate)
+# daydate[needfmt] <- as.Date(daytxt[needfmt], format="%d %B %Y")
 
 ################################################################################
 # DEFINE COMPARISON FUNCTIONS

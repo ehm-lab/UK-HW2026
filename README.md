@@ -12,33 +12,40 @@ Carlo samples of the model coefficients.
 
 ## Repository contents
 
+- `data/00.dowload_data.R` downloads public ONS daily death-occurrence data
+and creates `data/mort_doy_weights.csv`. It is a data-preparation script and
+is not called by `run_all.R`.
 - `00.pkg.R` loads the required R packages and creates output folders.
-- `01.prep.R` reads and validates all inputs and prepares the model objects.
+- `01.prep_new.R` reads and validates all inputs, applies the seasonal
+mortality weights and prepares the model objects.
 - `02a.impact_totals.R` estimates study-period and heatwave-period totals by
-  region and age, including empirical confidence intervals.
+region and age, including empirical confidence intervals.
 - `02b.daily_timeseries.R` estimates daily results by age and the England
-  all-age series used in the UKHSA comparisons.
+all-age series used in the UKHSA comparisons.
 - `02c.lsoa_impacts.R` estimates daily LSOA point estimates used in Figure 2.
 - `03.tables.R` creates Table 1, Table S2, detailed result files and Figure 1.
 - `04.maps_avrexc.R` creates Figure 2 and its underlying LSOA-period data.
 - `05.external_comparison.R` creates Table S1.
 - `06.exposure_summary.R` creates the temperature statistics reported in the
-  Results and Figure S1.
+Results and Figure S1.
 - `run_all.R` runs the complete analysis in order.
 - `data/` contains model, population, mortality and geography inputs.
 - `download/` contains only the analysis-ready daily mean and maximum
-  temperature files used in the manuscript.
+temperature files used in the manuscript.
 - `data-preparation/` contains the two notebooks used to retrieve the daily
-  mean and maximum temperature data.
+mean and maximum temperature data.
 - `temp/` contains intermediate model results.
 - `tables/` and `figures/` contain the generated outputs.
 
 ## Software requirements
 
 Run the analysis in R with the following packages installed:
-
-`dlnm`, `data.table`, `dplyr`, `tidyr`, `foreach`, `doParallel`, `MASS`,
+  
+  `dlnm`, `data.table`, `dplyr`, `tidyr`, `foreach`, `doParallel`, `MASS`,
 `abind`, `ggplot2`, `sf`, `patchwork`, and `arrow`.
+
+Regenerating the seasonal mortality weights additionally requires `readxl`,
+`lubridate`, `pbs`, and `splines`.
 
 The temperature extraction notebooks require Python with `pandas`, `pyarrow`,
 `requests`, and `timezonefinder`.
@@ -46,13 +53,30 @@ The temperature extraction notebooks require Python with `pandas`, `pyarrow`,
 ## Analysis inputs
 
 The mortality analysis uses:
-
-- previously estimated LSOA- and age-specific model parameters in `data/`;
+  
+  - previously estimated LSOA- and age-specific model parameters in `data/`;
 - 2020 LSOA population data in `data/population_2020.zip`;
 - 2024 regional age-specific mortality rates in
-  `data/deathrates_2024.csv`;
+`data/deathrates_2024.zip`;
+- region-, age- and day-of-year-specific mortality weights in
+`data/mort_doy_weights.csv`, estimated from public ONS daily
+death-occurrence data for 2010-2019;
 - daily mean 2-m temperature in
-  `download/LSOA_daily_ERA5_2026m2s_t2m.parquet`.
+`download/LSOA_daily_ERA5_2026m2s_t2m.parquet`.
+
+The mortality weights are normalised to a mean of one within each region and
+age group, so they redistribute annual expected mortality across the 365 days
+of the year without changing its annual total. The supplied CSV is sufficient
+to run the revised analysis. To reproduce it from the ONS source, run:
+  
+  ```r
+source("data/00.dowload_data.R")
+```
+
+The script downloads the ONS dataset [*Daily deaths occurrences, England and
+  Wales, 1981 and 2020*](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/deaths/adhocs/14173dailydeathsoccurrencesenglandandwales1981and2020)
+(reference 14173), retains 2010-2019 and derives the daily ratios using
+periodic B-spline models.
 
 Daily maximum 2-m temperature in
 `download/LSOA_daily_ERA5_2026m2s_tmax.parquet` is used only for the

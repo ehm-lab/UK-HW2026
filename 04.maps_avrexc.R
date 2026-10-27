@@ -82,8 +82,9 @@ pmap <- ggplot(plotmap) +
     name="Excess deaths per million person-days") +
   facet_wrap(~period, ncol=3) +
   theme_void() +
-  theme(legend.position="bottom", strip.text=element_text(face="bold")) +
+  theme(legend.position="bottom", 
+    strip.text=element_text(face="bold", margin=margin(t=3, b=4))) +
   guides(fill=guide_colorsteps(barwidth=14,barheight=0.6,title.position="top"))
 
 print(pmap)
-ggsave("figures/Fig2_map_avrexc_2026.png", pmap, width=14, height=9, dpi=300)
+ggsave("figures/Fig2_map_avrexc_2026.png", pmap, width=14, height=9, dpi=1200)

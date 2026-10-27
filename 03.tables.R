@@ -176,10 +176,11 @@ write.csv(tabout, "tables/Table1_summary_2026.csv", row.names=F)
 dayage <- readRDS("temp/dayage_2026.rds")
 
 # Parse stored date labels
-daytxt <- dimnames(dayage)$date
-daydate <- suppressWarnings(as.Date(daytxt))
-needfmt <- is.na(daydate)
-daydate[needfmt] <- as.Date(daytxt[needfmt], format="%d %B %Y")
+daydate <- as.Date(dimnames(dayage)$date)
+# daytxt <- dimnames(dayage)$date
+# daydate <- suppressWarnings(as.Date(daytxt))
+# needfmt <- is.na(daydate)
+# daydate[needfmt] <- as.Date(daytxt[needfmt], format="%d %B %Y")
 
 # Set up one row per age group and date
 tabday <- expand.grid(agegr=agecode,dayid=seq_along(daydate),stringsAsFactors=F)
@@ -255,8 +256,7 @@ pfigure <- patchwork::wrap_plots(pmort, ptemp, patchwork::guide_area(), ncol=1,
   heights=c(2, 1, 0.15),guides="collect") +
   patchwork::plot_annotation(
     title=paste0("Heat-related excess mortality and national mean temperature, ",
-      "summer 2026")
-  )
+      "summer 2026"))
 
 print(pfigure)
-ggsave("figures/Fig1_daily_mort_t2m_2026.png",pfigure,width=11,height=8,dpi=300)
+ggsave("figures/Fig1_daily_mort_t2m_2026.png",pfigure,width=11,height=8,dpi=1200)
