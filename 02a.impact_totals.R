@@ -4,12 +4,6 @@
 ################################################################################
 
 ################################################################################
-# SAMPLE MODEL COEFFICIENTS
-
-set.seed(13041975)
-simcoef <- mvrnorm(nsim, coefmeta, vcovmeta)
-
-################################################################################
 # CALCULATE REGION AND AGE TOTALS
 
 cl <- parallel::makeCluster(ncore)
@@ -21,13 +15,12 @@ nreg <- length(regcode)
 nperiod <- nrow(hwperiod)+1
 ntype <- nsim+1
 
-regage <- foreach(ids=chunks, .combine="+",
-  .packages=c("dlnm", "data.table", "MASS", "abind")
+regage <- foreach(ids=chunks, .combine="+", .packages=pkg
 ) %dopar% {
   out <- array(0, dim=c(nage, nreg, nperiod, ntype))
   
   for(i in ids) {
-    est <- lsoaeffect(i, usesim=TRUE)
+    est <- flsoaeff(i, usesim=TRUE)
     regid <- match(lsoareg[i], regcode)
     
     out[, regid, 1, ] <- out[, regid, 1, ] + apply(est, c(1, 3), sum)

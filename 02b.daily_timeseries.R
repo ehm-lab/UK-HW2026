@@ -4,13 +4,6 @@
 ################################################################################
 
 ################################################################################
-# SAMPLE MODEL COEFFICIENTS
-
-# Use the same seed as script 02a.
-set.seed(13041975)
-simcoef <- mvrnorm(nsim, coefmeta, vcovmeta)
-
-################################################################################
 # CALCULATE DAILY RESULTS
 
 cl <- parallel::makeCluster(ncore)
@@ -21,15 +14,14 @@ nage <- length(agevarlab)+1
 nseries <- nage+1
 ntype <- nsim+1
 
-daycomb <- foreach(ids=chunks, .combine="+",
-  .packages=c("dlnm", "data.table", "MASS", "abind")
+daycomb <- foreach(ids=chunks, .combine="+", .packages=pkg
 ) %dopar% {
   # The first five series cover England and Wales by age.
   # The last series is the England all-age result for UKHSA comparison.
   out <- array(0, dim=c(nseries, length(dates), ntype))
   
   for(i in ids) {
-    est <- lsoaeffect(i, usesim=TRUE)
+    est <- flsoaeff(i, usesim=TRUE)
     out[seq_len(nage), , ] <- out[seq_len(nage), , ] + est
     
     if(lsoareg[i] != "W92000004") {

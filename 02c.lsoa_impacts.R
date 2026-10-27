@@ -6,20 +6,16 @@
 ################################################################################
 # CALCULATE DAILY LSOA RESULTS
 
-# Maps require point estimates only.
-simcoef <- NULL
-
 cl <- parallel::makeCluster(ncore)
 registerDoParallel(cl)
 parallel::clusterExport(cl, parobj, envir=.GlobalEnv)
 
-daylsoa <- foreach(ids=chunks, .combine="rbind", .inorder=TRUE,
-  .packages=c("dlnm", "data.table", "abind")
+daylsoa <- foreach(ids=chunks, .combine="rbind", .inorder=TRUE, .packages=pkg
 ) %dopar% {
   out <- matrix(NA_real_, nrow=length(ids), ncol=length(dates))
   
   for(k in seq_along(ids)) {
-    est <- lsoaeffect(ids[k], usesim=FALSE)
+    est <- flsoaeff(ids[k], usesim=FALSE)
     out[k, ] <- est["all", , 1]
   }
   out
