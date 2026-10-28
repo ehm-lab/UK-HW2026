@@ -6,26 +6,24 @@
 ################################################################################
 # SET ANALYSIS OPTIONS
 
-# Define study period and computation settings
+# Define the start and end dates of the complete study period
 datestart <- as.Date("2026-05-01")
 dateend <- as.Date("2026-09-30")
 
 # Prepare the parallelisation
 ncore <- max(1, min(4, parallel::detectCores()-2))
 chunksize <- 100
+pkg <- c("dlnm", "data.table", "MASS", "abind")
 
-# Number of simulation for eCI of excess deaths
+# Prepare the number of simulation for eCI of excess deaths
 nsim <- 500
 
 # Define five heatwave periods used in event-specific analyses
 hwperiod <- data.frame(event=paste0("HW", 1:5),
-  start=as.Date(c(
-    "2026-05-22","2026-06-18","2026-07-06","2026-07-29","2026-08-11")),
-  end=as.Date(c(
-    "2026-05-28","2026-06-28","2026-07-17","2026-08-05","2026-08-15")))
-hwperiod$label <- paste0(
-  hwperiod$event, ": ", format(hwperiod$start, "%d %b"), "-",
-  format(hwperiod$end, "%d %b"))
+  start=as.Date(paste0("2026-", c("05-22","06-18","07-06","07-29","08-11"))),
+  end=as.Date(paste0("2026-", c("05-28","06-28","07-17","08-05","08-15"))))
+hwperiod$label <- paste0(hwperiod$event, ": ", 
+  format(hwperiod$start, "%d %b"), "-", format(hwperiod$end, "%d %b"))
 
 # Define complete study-period label
 periodlab <- "1 May-30 Sept" 
@@ -33,9 +31,13 @@ periodlab <- "1 May-30 Sept"
 ################################################################################
 # LOAD MODEL PARAMETERS
 
-# Load model objects
+# Load model objects (meta-model coef, covariance, LSOA composition, temperatures)
 obj <- c("coefmeta", "vcovmeta", "lsoacomp", "lsoatmeanper")
 for(x in obj)  assign(x, readRDS(paste0("data/", x, ".RDS")))
+
+# Sample coef for Monte-Carlo simulations
+set.seed(13041975)
+simcoef <- mvrnorm(nsim, coefmeta, vcovmeta)
 
 # Define age groups
 agelab <- c("0-64", "65-74", "75-84", "85 and above")
@@ -62,6 +64,7 @@ lookup <- lookup[with(lookup, order(LSOA11CD, LAD11CD)), ]
 listlsoa <- unique(lookup$LSOA11CD)
 listlad <- sort(unique(lookup$LAD11CD))
 
+# Create lookup for regions
 reglookup <- unique(lookup[c("RGN11CD", "RGN11NM")])
 regcode <- c(paste0("E1200000", 1:9), "W92000004")
 reglookup <- reglookup[match(regcode, reglookup$RGN11CD), ]
@@ -87,12 +90,8 @@ names(pop)[-1] <- paste0("age", 0:90)
 # Aggregate population into five-year age groups
 agecut1 <- c(0, 1, 1:18*5)
 agecut2 <- c(0, 1:18*5-1, 90)
-
-pop <- cbind(pop[1],
-  mapply(":", agecut1, agecut2) |>
-    lapply(function(x) rowSums(pop[paste0("age", x)])) |>
-    Reduce(cbind, x=_))
-
+pop <- cbind(pop[1], mapply(":", agecut1, agecut2) |>
+    lapply(function(x) rowSums(pop[paste0("age", x)])) |> Reduce(cbind, x=_))
 names(pop)[-1] <- mapply(paste0, "age", sprintf("%02d", agecut1),
   sprintf("%02d", agecut2))
 
@@ -128,7 +127,37 @@ basedat <- summarise(basedat,pop=sum(pop),deathyear=sum(deathyear),
   .by=LSOA11CD) |> mutate(agegr="all") |> rbind(basedat) |>
   arrange(LSOA11CD, agegr)
 
-rm(pop, deathrate)
+################################################################################
+# LOAD RESHAPED SEASONAL MORTALITY DATA FROM ONS AND DERIVE DAILY WEIGHTS
+
+# Load region-, age-, and day-specific seasonal mortality
+mortality <- read.csv("data/mortality_doy.csv") |>
+  dplyr::mutate(date=as.Date(date),doy=as.integer(doy),deaths=as.numeric(deaths))
+
+# Fit cyclic seasonal models
+fseasonwt <- function(dat) {
+  fit <- glm(deaths ~ pbs(doy,df=6,Boundary.knots=c(0.5,365.5))+ ns(date,df=3),
+    family=quasipoisson(), data=dat)
+  newdata <- data.frame(doy=1:365,date=as.Date("2015-01-01"))
+  pred <- predict(fit, newdata=newdata, type="response")
+  data.frame(doy=1:365, weight=pred/mean(pred))
+}
+
+# Create region-, age-, and day-specific seasonal mortality weights
+weights <- mortality |>
+  group_by(RGN11CD, agegr) |>
+  group_modify(~fseasonwt(.x)) |>
+  ungroup() |>
+  arrange(RGN11CD, agegr, doy)
+
+# Store weights as region-by-age-by-day array for fast lookup
+seasonwt <- xtabs(weight ~ RGN11CD + agegr + doy, data=weights)
+
+# Test: region × age × day
+# seasonwt["E12000007", "age85plus", "200"]
+
+# Remove temporary objects
+rm(pop, deathrate, mortality, weights)
 
 ################################################################################
 # PREPARE DAILY MEAN TEMPERATURE
@@ -139,12 +168,14 @@ tempdat <- as.data.table(tempdat)
 tempdat[, date := as.Date(date, tz="Europe/London")]
 tempdat <- tempdat[date >= datestart & date <= dateend]
 setorder(tempdat, LSOA11CD, date)
+
+# Define study dates
 dates <- seq(datestart, dateend, by="day")
+study_doy <- as.integer(format(dates, "%j"))
 
 # Check LSOA-date uniqueness and coverage
 if(anyDuplicated(tempdat, by=c("LSOA11CD", "date")) > 0L)
   stop("Daily mean-temperature data contain duplicate LSOA-date rows")
-
 if(!setequal(unique(tempdat$LSOA11CD), listlsoa) ||
     !setequal(unique(tempdat$date), dates) ||
     nrow(tempdat) != length(listlsoa)*length(dates))
@@ -180,14 +211,14 @@ ladshp <- ladshp[match(listlad, ladshp$LAD11CD), ]
 # DEFINE THE LSOA EFFECT FUNCTION
 
 # Estimate daily heat-related deaths by LSOA and age group
-lsoaeffect <- function(i, usesim=TRUE) {
+flsoaeff <- function(i, usesim=TRUE) {
   
   # Extract local temperature percentiles
   tmeanper <- lsoatmeanper[i, -1] |> as.matrix() |> drop()
   
   # Define the local temperature basis
-  argvar <- list(fun=varfun,knots=tmeanper[paste0(varper, ".0%")],
-    Bound=tmeanper[c("0.0%", "100.0%")],degree=vardegree)
+  argvar <- list(fun=varfun, knots=tmeanper[paste0(varper, ".0%")],
+    Bound=tmeanper[c("0.0%", "100.0%")], degree=vardegree)
   
   # Estimate effects for each age group
   estlist <- lapply(seq_along(agevarlab), function(j) {
@@ -196,36 +227,37 @@ lsoaeffect <- function(i, usesim=TRUE) {
     lsoavar <- cbind(agegr=agevarlab[j], lsoacomp[i, ])
     form <- paste("~",paste(c("agegr", names(lsoacomp)[-1]), collapse="+")) |>
       formula()
-    
-    xdes <- model.matrix(form, data=lsoavar,xlev=list(agegr=agevarlab))
-    xkron <- xdes %x% diag(vardf)
-    fit <- drop(xkron %*% coefmeta)
+    xdes <- model.matrix(form, data=lsoavar, xlev=list(agegr=agevarlab))
+    fit <- drop((xdes %x% diag(vardf)) %*% coefmeta)
     
     # Identify the local minimum-mortality temperature
     seqtemp <- seq(round(tmeanper["1.0%"],1),round(tmeanper["99.0%"],1),by=0.1)
     bvar <- do.call(onebasis, c(list(x=seqtemp), argvar))
     mmt <- seqtemp[which.min(bvar %*% fit)]
     
-    # Centre the temperature basis at the minimum-mortality temperature
+    # Centre the temperature basis at the minimum-mortality temperature (MMT)
+    # Set temperatures below local MMT to MMT so only heat-attributable effects are estimated.
     temp <- pmax(as.numeric(tmeandat[i, -1]), mmt)
     bvar <- suppressWarnings(do.call(onebasis, c(list(x=temp), argvar)))
     cenvec <- do.call(onebasis, c(list(x=mmt), argvar))
     bvarcen <- scale(bvar, center=cenvec, scale=FALSE)
     
-    # Calculate daily baseline deaths
-    deaths <- subset(basedat,
-      LSOA11CD==listlsoa[i]&agegr==agevarlab[j])$deathyear/365
-    
+    # Calculate daily baseline deaths with region- and age-specific seasonality
+    annual_deaths <- subset(basedat, LSOA11CD==listlsoa[i] & 
+        agegr==agevarlab[j])$deathyear
+    wt <- seasonwt[lsoareg[i],agevarlab[j],as.character(study_doy)]
+    deaths <- annual_deaths/365*wt
+
     # Calculate point estimates of daily heat-related deaths
-    estimate <- drop((1-exp(-bvarcen %*% fit))*deaths)
+    excdeath <- drop((1-exp(-bvarcen %*% fit))*deaths)
     
     # Return point estimates when simulations are not requested
-    if(!usesim) return(matrix(estimate, ncol=1))
+    if(!usesim) return(matrix(excdeath, ncol=1))
     
-    # Calculate simulated daily heat-related deaths
-    coefsim <- simcoef %*% t(xkron)
+    # Calculate simulated distribution of daily heat-related deaths
+    coefsim <- simcoef %*% t(xdes %x% diag(vardf))
     sim <- (1-exp(-bvarcen %*% t(coefsim)))*deaths
-    cbind(estimate, sim)
+    cbind(excdeath, sim)
   })
   
   # Combine age-specific estimates and calculate all-age totals
@@ -234,8 +266,10 @@ lsoaeffect <- function(i, usesim=TRUE) {
   est <- abind(est, allage, along=1)
   
   # Label output dimensions
-  dimnames(est) <- list(c(agevarlab, "all"),as.character(dates),
+  dimnames(est) <- list(c(agevarlab, "all"), as.character(dates),
     c("est", if(usesim) paste0("sim", seq(nsim))))
+  
+  # Return
   est
 }
 
@@ -247,8 +281,8 @@ chunks <- split(seq_along(listlsoa), ceiling(seq_along(listlsoa) / chunksize))
 
 # List objects required by parallel workers
 parobj <- c(
-  "lsoaeffect", "agevarlab", "lsoatmeanper", "varfun", "varper",
+  "flsoaeff", "agevarlab", "lsoatmeanper", "varfun", "varper",
   "vardegree", "lsoacomp", "coefmeta", "vardf", "tmeandat",
-  "basedat", "listlsoa", "dates", "nsim", "simcoef",
+  "basedat", "seasonwt", "study_doy", "listlsoa", "dates", "nsim", "simcoef",
   "hwperiod", "periodlab", "regcode", "lsoareg"
 )

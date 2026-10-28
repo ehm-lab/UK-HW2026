@@ -12,40 +12,44 @@ Carlo samples of the model coefficients.
 
 ## Repository contents
 
-- `data/00.dowload_data.R` downloads public ONS daily death-occurrence data
-and creates `data/mort_doy_weights.csv`. It is a data-preparation script and
-is not called by `run_all.R`.
+- `data-preparation/00.getdata.R` downloads and reshapes public ONS daily
+death-occurrence data into `data/mortality_doy.csv`. It is not called by
+`run_all.R`.
 - `00.pkg.R` loads the required R packages and creates output folders.
-- `01.prep_new.R` reads and validates all inputs, applies the seasonal
+- `01.prep.R` reads and validates all inputs, applies the seasonal
 mortality weights and prepares the model objects.
 - `02a.impact_totals.R` estimates study-period and heatwave-period totals by
 region and age, including empirical confidence intervals.
 - `02b.daily_timeseries.R` estimates daily results by age and the England
 all-age series used in the UKHSA comparisons.
 - `02c.lsoa_impacts.R` estimates daily LSOA point estimates used in Figure 2.
-- `03.tables.R` creates Table 1, Table S2, detailed result files and Figure 1.
-- `04.maps_avrexc.R` creates Figure 2 and its underlying LSOA-period data.
-- `05.external_comparison.R` creates Table S1.
-- `06.exposure_summary.R` creates the temperature statistics reported in the
+- `03.output.R` creates unformatted national, regional, daily, LSOA and LAD
+output files, including the national and regional 75+ results.
+- `04.tables.R` creates manuscript Table 1 and Table S2.
+- `05.figures.R` creates Figures 1 and 2 from files in `output/`.
+- `06.external_comparison.R` creates Table S1.
+- `07.exposure_summary.R` creates the temperature statistics reported in the
 Results and Figure S1.
 - `run_all.R` runs the complete analysis in order.
 - `data/` contains model, population, mortality and geography inputs.
-- `download/` contains only the analysis-ready daily mean and maximum
-temperature files used in the manuscript.
-- `data-preparation/` contains the two notebooks used to retrieve the daily
-mean and maximum temperature data.
+- `download/` contains the analysis-ready temperature files and the downloaded
+ONS workbook used by the optional data-preparation script.
+- `data-preparation/` contains the ONS preparation script and the two
+temperature-retrieval notebooks.
 - `temp/` contains intermediate model results.
+- `output/` contains numeric, machine-readable results without presentation
+formatting or individual simulation draws.
 - `tables/` and `figures/` contain the generated outputs.
 
 ## Software requirements
 
 Run the analysis in R with the following packages installed:
   
-  `dlnm`, `data.table`, `dplyr`, `tidyr`, `foreach`, `doParallel`, `MASS`,
-`abind`, `ggplot2`, `sf`, `patchwork`, and `arrow`.
+  `dlnm`, `mixmeta`, `data.table`, `dplyr`, `tidyr`, `foreach`, `doParallel`,
+`MASS`, `abind`, `ggplot2`, `sf`, `patchwork`, `arrow`, `pbs`, and `splines`.
 
-Regenerating the seasonal mortality weights additionally requires `readxl`,
-`lubridate`, `pbs`, and `splines`.
+Regenerating `data/mortality_doy.csv` from the ONS workbook additionally
+requires `readxl` and `lubridate`.
 
 The temperature extraction notebooks require Python with `pandas`, `pyarrow`,
 `requests`, and `timezonefinder`.
@@ -58,19 +62,20 @@ The mortality analysis uses:
 - 2020 LSOA population data in `data/population_2020.zip`;
 - 2024 regional age-specific mortality rates in
 `data/deathrates_2024.zip`;
-- region-, age- and day-of-year-specific mortality weights in
-`data/mort_doy_weights.csv`, estimated from public ONS daily
-death-occurrence data for 2010-2019;
+- region-, age- and day-specific mortality counts in
+`data/mortality_doy.csv`, reshaped from public ONS death-occurrence data for
+2010-2019;
 - daily mean 2-m temperature in
 `download/LSOA_daily_ERA5_2026m2s_t2m.parquet`.
 
-The mortality weights are normalised to a mean of one within each region and
-age group, so they redistribute annual expected mortality across the 365 days
-of the year without changing its annual total. The supplied CSV is sufficient
-to run the revised analysis. To reproduce it from the ONS source, run:
+`01.prep.R` fits the cyclic seasonal models and normalises the resulting daily
+weights to a mean of one within each region and age group. The weights therefore
+redistribute annual expected mortality across 365 days without changing its
+annual total. The supplied CSV is sufficient to run the analysis. To reproduce
+it from the ONS source, run:
   
   ```r
-source("data/00.dowload_data.R")
+source("data-preparation/00.getdata.R")
 ```
 
 The script downloads the ONS dataset [*Daily deaths occurrences, England and
@@ -118,29 +123,47 @@ Open `UK-HW2026.Rproj` and run:
 source("run_all.R")
 ```
 
-Alternatively, source scripts `00` through `06` in numerical order. Run the
+Alternatively, source scripts `00` through `07` in numerical order. Run the
 three `02` scripts sequentially because each uses parallel processing. Script
-`06` depends only on objects prepared by `01` and may be run separately after
+`07` depends only on objects prepared by `01` and may be run separately after
 `00` and `01`.
 
-The simulation seed is fixed in scripts `02a` and `02b`. The three `02`
-scripts are the computationally intensive part of the workflow. Supplied
-intermediate RDS files in `temp/` allow the table and figure scripts to be
-reviewed without repeating those calculations.
+The simulation seed is fixed in `01.prep.R`. The three `02`
+scripts are the computationally intensive part of the workflow. After one
+complete local run, intermediate RDS files in `temp/` allow `03.output.R` and
+later scripts to be rerun without repeating those calculations. The `temp/`
+folder is excluded from version control.
+
+## Machine-readable outputs
+
+`03.output.R` creates numeric CSV files without thousands separators or the
+500 individual simulation draws:
+
+- `output/national_age_period.csv`: national results by age and period;
+- `output/region_age_period.csv`: regional results by age and period;
+- `output/national_75plus_period.csv`: national 75+ results by period;
+- `output/region_75plus_period.csv`: regional 75+ results by period;
+- `output/national_daily.csv`: daily national results by age;
+- `output/national_t2m_daily.csv`: the national mean-temperature series;
+- `output/lsoa_hw_period.csv`: non-negative LSOA point estimates for each
+  heatwave period, used in Figure 2;
+- `output/lad_study_period.csv`: all-age LAD point estimates for the complete
+  study period, prepared for the Press request. LAD empirical intervals are
+  not available because `temp/daylsoa.rds` contains point estimates only.
 
 ## Manuscript outputs
 
 Figures:
 
-- `figures/Fig1_daily_mort_t2m_2026.png`
-- `figures/Fig2_map_avrexc_2026.png`
-- `figures/FigS1_temperature_extremes_2026.png`
+- `figures/Fig1_daily_ts.png`
+- `figures/Fig2_map_excpd.png`
+- `figures/FigS1_tmax_extremes.png`
 
 Tables:
 
-- `tables/Table1_summary_2026.csv`
-- `tables/TableS1_external_comparison_2026.csv`
-- `tables/TableS2_region_age_2026.csv`
+- `tables/Table1_summary.csv`
+- `tables/TableS1_external_comparison.csv`
+- `tables/TableS2_region_age.csv`
 
 The `tables/` folder contains only the three manuscript-facing tables listed
 above. Intermediate results are retained as R objects or in `temp/` and are

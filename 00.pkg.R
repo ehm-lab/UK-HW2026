@@ -15,5 +15,6 @@ library(arrow)
 
 # OUTPUT FOLDERS
 dir.create("temp", showWarnings=FALSE)
+dir.create("output", showWarnings=FALSE)
 dir.create("tables", showWarnings=FALSE)
 dir.create("figures", showWarnings=FALSE)

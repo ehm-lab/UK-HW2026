@@ -1,17 +1,14 @@
 ################################################################################
 # UK-HW2026: 2026 SUMMER HEAT-RELATED EXCESS MORTALITY
-# SCRIPT 06: DESCRIBE DAILY MAXIMUM TEMPERATURE AND CREATE FIGURE S1
+# SCRIPT 07: DESCRIBE DAILY MAXIMUM TEMPERATURE AND CREATE FIGURE S1
 ################################################################################
 
 ################################################################################
 # CHECK REQUIRED OBJECTS AND STUDY DATES
 
 # Run after 01.prep.R and confirm the expected study period
-stopifnot(
-  exists("dates"), exists("hwperiod"), exists("listlsoa"),
-  min(dates) == as.Date("2026-05-01"),
-  max(dates) == as.Date("2026-09-30")
-)
+stopifnot(exists("dates"), exists("hwperiod"), exists("listlsoa"),
+  min(dates) == as.Date("2026-05-01"), max(dates) == as.Date("2026-09-30"))
 
 ################################################################################
 # PREPARE DAILY MAXIMUM TEMPERATURE
@@ -19,11 +16,6 @@ stopifnot(
 # Load daily maximum temperatures
 tmax_file <- "download/LSOA_daily_ERA5_2026m2s_tmax.parquet"
 tmaxdat <- as.data.table(read_parquet(tmax_file))
-
-# Check required columns
-required_tmax_columns <- c("LSOA11CD", "date", "tmax")
-if(!all(required_tmax_columns %in% names(tmaxdat)))
-  stop("Daily maximum-temperature data are missing required columns")
 
 # Restrict data to the study dates and order observations
 tmaxdat[, date := as.Date(date, tz="Europe/London")]
@@ -131,11 +123,10 @@ pgt30 <- ggplot() +
   theme_tmax
 
 # Combine and save both panels
-fig_tmax <- (ptmax_distribution/pgt30) +
-  plot_layout(heights=c(1, 0.9))
+fig_tmax <- (ptmax_distribution/pgt30) + plot_layout(heights=c(1, 0.9))
 
 print(fig_tmax)
-ggsave("figures/FigS1_temperature_extremes_2026.png", fig_tmax,
+ggsave("figures/FigS1_tmax_extremes.png", fig_tmax,
   width=9, height=7, units="in", dpi=1200)
 
 # Print manuscript exposure statistics and remove the full input data
