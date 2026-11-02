@@ -7,7 +7,7 @@
 # PREPARE TIME SERIES DATA
 
 # Read the daily national results 
-tabday <- read.csv("output/national_daily.csv", na.strings = "") |>
+tabday <- read.csv("output/national_mort_daily.csv", na.strings = "") |>
   dplyr::mutate(date=as.Date(date))
 
 # Read the national mean temperature series

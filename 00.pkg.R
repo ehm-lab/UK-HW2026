@@ -12,6 +12,8 @@ library(MASS)
 library(abind)
 library(ggplot2) ; library(sf); library(patchwork)
 library(arrow)
+# install.packages("pbs")
+library(pbs) ; library(splines)
 
 # OUTPUT FOLDERS
 dir.create("temp", showWarnings=FALSE)

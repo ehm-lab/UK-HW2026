@@ -35,7 +35,7 @@ if(!setequal(unique(tmaxdat$LSOA11CD), listlsoa) ||
 # Summarise the daily distribution and spatial extent of high temperatures
 tmax_daily <- tmaxdat[, .(
   median_tmax=median(tmax),
-  p95_tmax=as.numeric(quantile(tmax, 0.95, names=FALSE)),
+  p95_tmax=as.numeric(quantile(tmax, 0.95, names=F)),
   max_tmax=max(tmax),
   n_lsoa_gt30=sum(tmax > 30),
   pct_lsoa_gt30=mean(tmax > 30)*100
@@ -58,11 +58,7 @@ exposure_summary <- data.table(
     peak_extent$n_lsoa_gt30,
     peak_extent$pct_lsoa_gt30),
   unit=c("degrees C", "days", "LSOAs", "percent"),
-  date=as.Date(c(
-    peak_tmax$date,
-    NA,
-    peak_extent$date,
-    peak_extent$date))
+  date=as.Date(c(peak_tmax$date, NA, peak_extent$date, peak_extent$date))
 )
 
 ################################################################################
@@ -88,9 +84,8 @@ theme_tmax <- theme_bw(base_size=11) +
 
 # Plot the daily temperature distribution
 ptmax_distribution <- ggplot() +
-  geom_rect(data=hwrect,
-    aes(xmin=start, xmax=end, ymin=ymin, ymax=ymax),
-    inherit.aes=FALSE, fill="gold", alpha=0.12) +
+  geom_rect(data=hwrect, aes(xmin=start, xmax=end, ymin=ymin, ymax=ymax),
+    inherit.aes=F, fill="gold", alpha=0.12) +
   geom_hline(yintercept=30, linetype="dashed", colour="firebrick",
     linewidth=0.4) +
   geom_line(data=tmax_long,
@@ -107,9 +102,8 @@ ptmax_distribution <- ggplot() +
 
 # Plot the percentage of LSOAs exceeding 30 degrees C
 pgt30 <- ggplot() +
-  geom_rect(data=hwrect_pct,
-    aes(xmin=start, xmax=end, ymin=ymin, ymax=ymax),
-    inherit.aes=FALSE, fill="gold", alpha=0.12) +
+  geom_rect(data=hwrect_pct, aes(xmin=start, xmax=end, ymin=ymin, ymax=ymax),
+    inherit.aes=F, fill="gold", alpha=0.12) +
   geom_area(data=tmax_daily, aes(x=date, y=pct_lsoa_gt30),
     fill="#9ECAE1", alpha=0.7) +
   geom_line(data=tmax_daily, aes(x=date, y=pct_lsoa_gt30),

@@ -19,12 +19,14 @@ death-occurrence data into `data/mortality_doy.csv`. It is not called by
 - `01.prep.R` reads and validates all inputs, applies the seasonal
 mortality weights and prepares the model objects.
 - `02a.impact_totals.R` estimates study-period and heatwave-period totals by
-region and age, including empirical confidence intervals.
+region and age, including empirical confidence intervals (eCIs).
 - `02b.daily_timeseries.R` estimates daily results by age and the England
 all-age series used in the UKHSA comparisons.
-- `02c.lsoa_impacts.R` estimates daily LSOA point estimates used in Figure 2.
-- `03.output.R` creates unformatted national, regional, daily, LSOA and LAD
-output files, including the national and regional 75+ results.
+- `02c.lsoa_impacts.R` estimates daily all-age LSOA point estimates used to 
+create Figure 2 and the complete-study-period LSOA and LAD outputs.
+- `03.output.R` creates unformatted national, regional, daily, LSOA and LAD 
+output files, including national and regional 75+ results and 
+complete-study-period LSOA and LAD point estimates.
 - `04.tables.R` creates manuscript Table 1 and Table S2.
 - `05.figures.R` creates Figures 1 and 2 from files in `output/`.
 - `06.external_comparison.R` creates Table S1.
@@ -69,10 +71,12 @@ The mortality analysis uses:
 `download/LSOA_daily_ERA5_2026m2s_t2m.parquet`.
 
 `01.prep.R` fits the cyclic seasonal models and normalises the resulting daily
-weights to a mean of one within each region and age group. The weights therefore
-redistribute annual expected mortality across 365 days without changing its
-annual total. The supplied CSV is sufficient to run the analysis. To reproduce
-it from the ONS source, run:
+weights to a mean of one within each region and age group. Daily baseline deaths
+are calculated as (annual expected deaths/365) × seasonal weight, thereby
+redistributing expected mortality across days without changing its annual
+total. The heat-attributable fraction, [(RR−1)/RR], is then applied to the daily
+baseline to estimate daily heat-related excess deaths. The supplied CSV is
+sufficient to run the analysis. To reproduce it from the ONS source, run:
   
   ```r
 source("data-preparation/00.getdata.R")
@@ -139,17 +143,28 @@ folder is excluded from version control.
 `03.output.R` creates numeric CSV files without thousands separators or the
 500 individual simulation draws:
 
-- `output/national_age_period.csv`: national results by age and period;
-- `output/region_age_period.csv`: regional results by age and period;
-- `output/national_75plus_period.csv`: national 75+ results by period;
-- `output/region_75plus_period.csv`: regional 75+ results by period;
-- `output/national_daily.csv`: daily national results by age;
-- `output/national_t2m_daily.csv`: the national mean-temperature series;
-- `output/lsoa_hw_period.csv`: non-negative LSOA point estimates for each
-  heatwave period, used in Figure 2;
+- `output/national_age_period.csv`: national results by age group and period,
+  including point estimates and eCIs;
+- `output/region_age_period.csv`: regional results by age group and period,
+  including point estimates and eCIs;
+- `output/national_75plus_period.csv`: national results for people aged 75
+  years or older, by period;
+- `output/region_75plus_period.csv`: regional results for people aged 75
+  years or older, by period;
+- `output/national_mort_daily.csv`: daily national mortality results by age
+  group, including point estimates and eCIs;
+- `output/national_t2m_daily.csv`: the unweighted mean of LSOA-level daily
+  mean temperatures;
+- `output/lsoa_hw_period.csv`: all-age LSOA point estimates for each heatwave 
+  period, used in Figure 2. The `rate` variable represents average daily 
+  excess deaths per million person-days;
+- `output/lsoa_study_period.csv`: all-age LSOA point estimates for the complete
+  study period. The `excess_deaths_per_million` variable represents cumulative
+  excess deaths per million population;
 - `output/lad_study_period.csv`: all-age LAD point estimates for the complete
-  study period, prepared for the Press request. LAD empirical intervals are
-  not available because `temp/daylsoa.rds` contains point estimates only.
+  study period, obtained by aggregating the LSOA estimates. The
+  `excess_deaths_per_million` variable represents cumulative excess deaths per
+  million population.
 
 ## Manuscript outputs
 
@@ -174,8 +189,6 @@ recreated by the analysis scripts when needed.
 The results are modelled heat-related excess deaths rather than deaths
 identified from complete 2026 mortality registrations. The analysis uses
 temperature-mortality functions estimated from 2000-2019 data, 2020
-population data and 2024 regional mortality rates. Negative LSOA point
-estimates are set to zero when calculating the mapped period-specific values;
-this does not alter national or regional estimates. Comparisons with Barnes et
+population data and 2024 regional mortality rates. Comparisons with Barnes et
 al. and UKHSA are descriptive because the assessments differ in data and
 methods.

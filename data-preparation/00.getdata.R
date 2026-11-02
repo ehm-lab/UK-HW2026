@@ -15,8 +15,6 @@ library(readxl)
 library(dplyr)
 library(tidyr)
 library(lubridate)
-# install.packages("pbs")
-library(pbs) ; library(splines)
 
 ################################################################################
 # SET PARAMETERS

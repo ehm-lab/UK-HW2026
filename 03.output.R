@@ -187,7 +187,7 @@ tabday$ratehigh <- tabday$upper/tabday$population*10^6
 tabday$dayid <- NULL
 
 # Save unformatted daily national results 
-write.csv(tabday, file="output/national_daily.csv", row.names=F, na="")
+write.csv(tabday, file="output/national_mort_daily.csv", row.names=F, na="")
 
 # Calculate the unweighted LSOA-mean temperature for each study date
 tempday <- data.frame(date=dates,
@@ -226,9 +226,11 @@ tablsoa <- do.call(rbind, lapply(seq_len(nrow(hwperiod)), function(i) {
     stringsAsFactors=F)
 }))
 
-# Join labels and population, then calculate rates per million person-days
-tablsoa <- merge(tablsoa, lsoalook, by="LSOA11CD", sort=F)
+# Join labels and population
+tablsoa <- merge(lsoalook, tablsoa, by="LSOA11CD", sort=F)
 tablsoa <- merge(tablsoa, lsoapop, by="LSOA11CD", sort=F)
+
+# Calculate average daily excess deaths per million person-days
 tablsoa$rate <- tablsoa$estimate/(tablsoa$population*tablsoa$n_days)*10^6
 
 # Restore heatwave-period and LSOA order after the joins
@@ -239,34 +241,57 @@ tablsoa <- tablsoa[order(match(tablsoa$period, hwperiod$label),
 write.csv(tablsoa, file="output/lsoa_hw_period.csv", row.names=F, na="")
 
 ################################################################################
+# CREATE LSOA POINT-ESTIMATE TABLE FOR THE COMPLETE STUDY PERIOD
+
+# Sum daily point estimates over the complete study period
+lsoatotal <- rowSums(daylsoa)
+
+# Match LSOA identifiers and geographical labels to the result rows
+tablsoaall <- lsoalook[match(rownames(daylsoa), lsoalook$LSOA11CD), ]
+
+# Add populations and point estimates
+tablsoaall$population <- lsoapop$population[
+  match(tablsoaall$LSOA11CD, lsoapop$LSOA11CD)]
+tablsoaall$estimate <- unname(lsoatotal[tablsoaall$LSOA11CD])
+
+# Calculate cumulative excess deaths per million population
+tablsoaall$excess_deaths_per_million <-
+  tablsoaall$estimate/tablsoaall$population*10^6
+
+# Retain the prepared LSOA order and save the complete table
+tablsoaall <- tablsoaall[order(match(tablsoaall$LSOA11CD, listlsoa)), ]
+rownames(tablsoaall) <- NULL
+
+# Save unformatted LSOA study period results
+write.csv(tablsoaall, file="output/lsoa_study_period.csv", row.names=F, na="")
+
+################################################################################
 # CREATE LAD POINT-ESTIMATE TABLE FOR THE COMPLETE STUDY PERIOD
 
 # Match each LSOA result row to its 2011 local authority district
 lsoalad <- lookup$LAD11CD[match(rownames(daylsoa), lookup$LSOA11CD)]
 
-# Sum daily estimates over the complete study period, then aggregate to LAD
-ladtotal <- tapply(rowSums(daylsoa), lsoalad, sum)
+# Sum complete-study-period LSOA estimates within each LAD
+ladtotal <- tapply(lsoatotal, lsoalad, sum)
 
 # Prepare one lookup row per LAD and retain the LAD order from the totals
 ladlook <- unique(lookup[c("LAD11CD", "LAD11NM", "RGN11CD", "RGN11NM")])
 tablad <- ladlook[match(names(ladtotal), ladlook$LAD11CD), ]
 
 # Aggregate the all-age LSOA populations to LAD level
-ladpop <- merge(lsoapop, lsoalook[c("LSOA11CD", "LAD11CD")],
-  by="LSOA11CD", sort=F)
+ladpop <- merge(lsoapop,lsoalook[c("LSOA11CD","LAD11CD")],by="LSOA11CD",sort=F)
 ladpop <- aggregate(population ~ LAD11CD, data=ladpop, sum)
 
-# Add study-period metadata, point estimates, populations and rates
-tablad$period <- periodlab
-tablad$start_date <- datestart
-tablad$end_date <- dateend
-tablad$agegr <- "all"
-tablad$age <- "All ages"
+# Add populations and point estimates
 tablad$population <- ladpop$population[match(tablad$LAD11CD, ladpop$LAD11CD)]
 tablad$estimate <- unname(ladtotal[tablad$LAD11CD])
-tablad$rate <- tablad$estimate/tablad$population*10^6
 
-# Order LADs by region and name, then save the Press spreadsheet
+# Calculate cumulative excess deaths per million population
+tablad$excess_deaths_per_million <- tablad$estimate/tablad$population*10^6
+
+# Order LADs by region and name
 tablad <- tablad[order(match(tablad$RGN11CD, regcode), tablad$LAD11NM), ]
 rownames(tablad) <- NULL
+
+# Save unformatted LAD study-period results
 write.csv(tablad, file="output/lad_study_period.csv", row.names=F, na="")
