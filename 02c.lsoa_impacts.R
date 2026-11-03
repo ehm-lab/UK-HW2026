@@ -11,18 +11,24 @@ cl <- parallel::makeCluster(ncore)
 registerDoParallel(cl)
 parallel::clusterExport(cl, parobj, envir=.GlobalEnv)
 
-# Process ordered LSOA chunks and combine their results by row
-daylsoa <- foreach(ids=chunks, .combine="rbind", .inorder=TRUE, .packages=pkg
+# Count four age-specific groups plus the all-age category
+nage <- length(agevarlab)+1
+
+# Process ordered LSOA chunks and combine their age-specific results by row
+daylsoamat <- foreach(ids=chunks, .combine="rbind", .inorder=TRUE, .packages=pkg
 ) %dopar% {
-  # Create one row per LSOA and one column per study date in this chunk
-  out <- matrix(NA_real_, nrow=length(ids), ncol=length(dates))
+  # Create one row per LSOA-age combination and one column per study date
+  out <- matrix(NA_real_, nrow=length(ids)*nage, ncol=length(dates))
   
-  # Calculate the daily all-age point estimate for each LSOA
+  # Calculate daily age-specific and all-age point estimates for each LSOA
   for(k in seq_along(ids)) {
     est <- flsoaeff(ids[k], usesim=FALSE)
-    # Store the all-age point-estimate series in the matching chunk row
-    out[k, ] <- est["all", , 1]
+    
+    # Store all age-group series in the matching block of chunk rows
+    rowid <- ((k-1)*nage+1):(k*nage)
+    out[rowid, ] <- est[c(agevarlab, "all"), , 1]
   }
+  
   # Return the completed chunk matrix for row binding by foreach
   out
 }
@@ -30,11 +36,16 @@ daylsoa <- foreach(ids=chunks, .combine="rbind", .inorder=TRUE, .packages=pkg
 # Close the parallel workers after all chunks have completed
 stopCluster(cl)
 
-# Label rows with ordered LSOA codes and columns with dates
-dimnames(daylsoa) <- list(listlsoa, as.character(dates))
+# Reshape the combined matrix to LSOA-by-age-by-date order
+daylsoaage <- aperm(
+  array(daylsoamat, dim=c(nage, length(listlsoa), length(dates))),
+  c(2, 1, 3))
+dimnames(daylsoaage) <- list(LSOA11CD=listlsoa, agegr=c(agevarlab, "all"),
+  date=as.character(dates))
 
-# Save daily LSOA point estimates
-saveRDS(daylsoa, "temp/daylsoa.rds")
+# Save daily LSOA point estimates with the age dimension
+saveRDS(daylsoaage, "temp/daylsoaage.rds") 
 
 # Request memory cleanup
+rm(daylsoamat)
 gc()

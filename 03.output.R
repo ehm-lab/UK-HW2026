@@ -12,7 +12,7 @@ agelabel <- c(agelab, "All ages")
 
 # Check that all intermediate result files are available
 reqfile <- file.path("temp", c("natage.rds","regage.rds","dayage.rds",
-  "daylsoa.rds"))
+  "daylsoaage.rds"))
 if(any(!file.exists(reqfile))) {
   stop("Missing intermediate results: ",
     paste(reqfile[!file.exists(reqfile)], collapse=", "))
@@ -199,23 +199,33 @@ write.csv(tempday, file="output/national_t2m_daily.csv", row.names=F, na="")
 ################################################################################
 # LSOA RESULTS FOR THE FIVE HEATWAVE PERIODS
 
-# Load daily LSOA point estimates and recover their dates
-daylsoa <- readRDS("temp/daylsoa.rds")
-lsoadate <- as.Date(colnames(daylsoa))
+# Load daily age-specific LSOA point estimates and recover their dates
+daylsoaage <- readRDS("temp/daylsoaage.rds")
+lsoadate <- as.Date(dimnames(daylsoaage)$date)
+lsoacode <- dimnames(daylsoaage)$LSOA11CD
 
-# Prepare unique LSOA labels and all-age populations for joining
+# Extract the all-age matrix used by the existing LSOA and LAD outputs
+daylsoa <- daylsoaage[, "all", ]
+
+# Prepare unique LSOA labels and age-specific populations for joining
 lsoalook <- unique(lookup[c(
   "LSOA11CD", "LSOA11NM", "LAD11CD", "LAD11NM", "RGN11CD", "RGN11NM"
 )])
-lsoapop <- subset(basedat,as.character(agegr)=="all",select=c("LSOA11CD","pop"))
-names(lsoapop)[2] <- "population"
+lsoapopage <- subset(basedat, as.character(agegr) %in% agecode,
+  select=c("LSOA11CD", "agegr", "pop"))
+lsoapopage$agegr <- as.character(lsoapopage$agegr)
+names(lsoapopage)[3] <- "population"
+
+# Retain the all-age populations used by the existing outputs
+lsoapop <- subset(lsoapopage, agegr=="all",
+  select=c("LSOA11CD", "population"))
 
 # Sum daily LSOA estimates separately for each heatwave period
 tablsoa <- do.call(rbind, lapply(seq_len(nrow(hwperiod)), function(i) {
   # Identify daily-result columns within the current period
   dayid <- which(
     lsoadate >= hwperiod$start[i] & lsoadate <= hwperiod$end[i])
-
+  
   # Sum each LSOA and apply the non-negative mapping rule
   est <- pmax(rowSums(daylsoa[, dayid, drop=F], na.rm=T), 0)
   
@@ -241,15 +251,62 @@ tablsoa <- tablsoa[order(match(tablsoa$period, hwperiod$label),
 write.csv(tablsoa, file="output/lsoa_hw_period.csv", row.names=F, na="")
 
 ################################################################################
-# CREATE LSOA POINT-ESTIMATE TABLE FOR THE COMPLETE STUDY PERIOD
+# CREATE AGE-SPECIFIC LSOA TABLE FOR THE FIVE HEATWAVE PERIODS
 
-# Sum daily point estimates over the complete study period
-lsoatotal <- rowSums(daylsoa)
+# Sum daily estimates by LSOA and age group for each heatwave period
+tablsoaage <- do.call(rbind, lapply(seq_len(nrow(hwperiod)), function(i) {
+  # Identify daily-result columns within the current period
+  dayid <- which(
+    lsoadate >= hwperiod$start[i] & lsoadate <= hwperiod$end[i])
+  
+  # Sum each LSOA-age series and apply the non-negative mapping rule
+  est <- apply(daylsoaage[, , dayid, drop=F], c(1, 2), sum, na.rm=T)
+  est <- pmax(est[, agecode, drop=F], 0)
+  
+  # Return identifiers, age groups, period metadata and point estimates
+  data.frame(LSOA11CD=rep(lsoacode, each=length(agecode)),
+    agegr=rep(agecode, times=length(lsoacode)),
+    age=rep(agelabel, times=length(lsoacode)),
+    event=hwperiod$event[i], period=hwperiod$label[i],
+    start_date=hwperiod$start[i], end_date=hwperiod$end[i],
+    n_days=length(dayid), estimate=as.vector(t(est)),
+    stringsAsFactors=F)
+}))
 
-# Match LSOA identifiers and geographical labels to the result rows
-tablsoaall <- lsoalook[match(rownames(daylsoa), lsoalook$LSOA11CD), ]
+# Join geographical labels and age-specific populations
+tablsoaage <- merge(lsoalook, tablsoaage, by="LSOA11CD", sort=F)
+tablsoaage <- merge(tablsoaage, lsoapopage, by=c("LSOA11CD", "agegr"), sort=F)
 
-# Add populations and point estimates
+# Calculate average daily excess deaths per million person-days
+tablsoaage$rate <- tablsoaage$estimate/
+  (tablsoaage$population*tablsoaage$n_days)*10^6
+
+# Restore heatwave-period, LSOA and age-group order after the joins
+tablsoaage <- tablsoaage[order(
+  match(tablsoaage$period, hwperiod$label),
+  match(tablsoaage$LSOA11CD, lsoacode),
+  match(tablsoaage$agegr, agecode)), ]
+
+# Arrange columns for easier reading
+lsoahwvar <- c("LSOA11CD", "LSOA11NM", "LAD11CD", "LAD11NM",
+  "RGN11CD", "RGN11NM", "agegr", "age", "event", "period",
+  "start_date", "end_date", "n_days", "population", "estimate", "rate")
+tablsoaage <- tablsoaage[lsoahwvar]
+rownames(tablsoaage) <- NULL
+
+# Save the large age-specific table in compressed CSV format
+write.csv(tablsoaage, file=gzfile("output/lsoa_age_hw_period.csv.gz"),
+  row.names=F, na="")
+
+################################################################################
+# CREATE LSOA POINT-ESTIMATE TABLES FOR THE COMPLETE STUDY PERIOD
+
+# Sum daily estimates by LSOA and age group over the complete study period
+lsoatotalage <- apply(daylsoaage, c(1, 2), sum)
+lsoatotal <- lsoatotalage[, "all"]
+
+# Match all-age LSOA results to geographical labels and populations
+tablsoaall <- lsoalook[match(lsoacode, lsoalook$LSOA11CD), ]
 tablsoaall$population <- lsoapop$population[
   match(tablsoaall$LSOA11CD, lsoapop$LSOA11CD)]
 tablsoaall$estimate <- unname(lsoatotal[tablsoaall$LSOA11CD])
@@ -258,12 +315,43 @@ tablsoaall$estimate <- unname(lsoatotal[tablsoaall$LSOA11CD])
 tablsoaall$excess_deaths_per_million <-
   tablsoaall$estimate/tablsoaall$population*10^6
 
-# Retain the prepared LSOA order and save the complete table
-tablsoaall <- tablsoaall[order(match(tablsoaall$LSOA11CD, listlsoa)), ]
+# Retain the prepared LSOA order and save the all-age table
+tablsoaall <- tablsoaall[order(match(tablsoaall$LSOA11CD, lsoacode)), ]
 rownames(tablsoaall) <- NULL
+write.csv(tablsoaall, file="output/lsoa_study_period.csv",
+  row.names=F, na="")
 
-# Save unformatted LSOA study period results
-write.csv(tablsoaall, file="output/lsoa_study_period.csv", row.names=F, na="")
+# Set up one complete-study-period row per LSOA and age group
+tablsoaageall <- data.frame(
+  LSOA11CD=rep(lsoacode, each=length(agecode)),
+  agegr=rep(agecode, times=length(lsoacode)),
+  age=rep(agelabel, times=length(lsoacode)),
+  estimate=as.vector(t(lsoatotalage[, agecode, drop=F])),
+  stringsAsFactors=F)
+
+# Join geographical labels and age-specific populations
+tablsoaageall <- merge(lsoalook, tablsoaageall,
+  by="LSOA11CD", sort=F)
+tablsoaageall <- merge(tablsoaageall, lsoapopage,
+  by=c("LSOA11CD", "agegr"), sort=F)
+
+# Calculate cumulative excess deaths per million population
+tablsoaageall$excess_deaths_per_million <-
+  tablsoaageall$estimate/tablsoaageall$population*10^6
+
+# Restore LSOA and age-group order after the joins
+tablsoaageall <- tablsoaageall[order(
+  match(tablsoaageall$LSOA11CD, lsoacode),
+  match(tablsoaageall$agegr, agecode)), ]
+
+# Arrange columns and save the compressed age-specific table
+lsoaallvar <- c("LSOA11CD", "LSOA11NM", "LAD11CD", "LAD11NM",
+  "RGN11CD", "RGN11NM", "agegr", "age", "population", "estimate",
+  "excess_deaths_per_million")
+tablsoaageall <- tablsoaageall[lsoaallvar]
+rownames(tablsoaageall) <- NULL
+write.csv(tablsoaageall,
+  file=gzfile("output/lsoa_age_study_period.csv.gz"), row.names=F, na="")
 
 ################################################################################
 # CREATE LAD POINT-ESTIMATE TABLE FOR THE COMPLETE STUDY PERIOD

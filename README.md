@@ -22,11 +22,12 @@ mortality weights and prepares the model objects.
 region and age, including empirical confidence intervals (eCIs).
 - `02b.daily_timeseries.R` estimates daily results by age and the England
 all-age series used in the UKHSA comparisons.
-- `02c.lsoa_impacts.R` estimates daily all-age LSOA point estimates used to 
-create Figure 2 and the complete-study-period LSOA and LAD outputs.
-- `03.output.R` creates unformatted national, regional, daily, LSOA and LAD 
-output files, including national and regional 75+ results and 
-complete-study-period LSOA and LAD point estimates.
+- `02c.lsoa_impacts.R` estimates daily age-specific and all-age LSOA point
+estimates. These are stored as an LSOA-by-age-by-date array and used to create
+the LSOA, LAD and Figure 2 outputs.
+- `03.output.R` creates unformatted national, regional, daily, LSOA and LAD
+output files, including national and regional 75+ results, age-specific LSOA
+results for the heatwave and complete study periods, and all-age LAD results.
 - `04.tables.R` creates manuscript Table 1 and Table S2.
 - `05.figures.R` creates Figures 1 and 2 from files in `output/`.
 - `06.external_comparison.R` creates Table S1.
@@ -60,7 +61,7 @@ The temperature extraction notebooks require Python with `pandas`, `pyarrow`,
 
 The mortality analysis uses:
   
-  - previously estimated LSOA- and age-specific model parameters in `data/`;
+- previously estimated LSOA- and age-specific model parameters in `data/`;
 - 2020 LSOA population data in `data/population_2020.zip`;
 - 2024 regional age-specific mortality rates in
 `data/deathrates_2024.zip`;
@@ -140,8 +141,9 @@ folder is excluded from version control.
 
 ## Machine-readable outputs
 
-`03.output.R` creates numeric CSV files without thousands separators or the
-500 individual simulation draws:
+`03.output.R` creates numeric CSV and gzip-compressed CSV files without
+thousands separators or the 500 individual simulation draws. The compressed
+`.csv.gz` files can be read directly in R using `read.csv()`:
 
 - `output/national_age_period.csv`: national results by age group and period,
   including point estimates and eCIs;
@@ -155,12 +157,20 @@ folder is excluded from version control.
   group, including point estimates and eCIs;
 - `output/national_t2m_daily.csv`: the unweighted mean of LSOA-level daily
   mean temperatures;
-- `output/lsoa_hw_period.csv`: all-age LSOA point estimates for each heatwave 
-  period, used in Figure 2. The `rate` variable represents average daily 
+- `output/lsoa_hw_period.csv`: all-age LSOA point estimates for each heatwave
+  period, used in Figure 2. The `rate` variable represents average daily
   excess deaths per million person-days;
+- `output/lsoa_age_hw_period.csv.gz`: age-specific and all-age LSOA point
+  estimates for each heatwave period. The `rate` variable represents average
+  daily excess deaths per million person-days. This file is gzip-compressed
+  because of its size;
 - `output/lsoa_study_period.csv`: all-age LSOA point estimates for the complete
   study period. The `excess_deaths_per_million` variable represents cumulative
   excess deaths per million population;
+- `output/lsoa_age_study_period.csv.gz`: age-specific and all-age LSOA point
+  estimates for the complete study period. The
+  `excess_deaths_per_million` variable represents cumulative excess deaths per
+  million population. This file is gzip-compressed because of its size;
 - `output/lad_study_period.csv`: all-age LAD point estimates for the complete
   study period, obtained by aggregating the LSOA estimates. The
   `excess_deaths_per_million` variable represents cumulative excess deaths per
