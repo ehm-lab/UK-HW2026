@@ -68,16 +68,17 @@ ggsave("figures/Fig1_daily_ts.png",pfigure,width=11,height=8,dpi=1200)
 ################################################################################
 # PREPARE MAP DATA
 
-# Read the LSOA heatwave-period results
-plotdat <- read.csv("output/lsoa_hw_period.csv", na.strings="")
-plotdat$period <- factor(plotdat$period, levels=hwperiod$label)
+# Read LSOA results and select the all-age estimates
+tablsoaage <- read.csv(gzfile("output/lsoa_age_hw_period.csv.gz"),na.strings="")
+tablsoa <- subset(tablsoaage, agegr=="all")
+tablsoa$period <- factor(tablsoa$period, levels=hwperiod$label)
 
 # Add regional identifiers to LAD boundaries
 ladmap <- merge(ladshp, unique(lookup[c("LAD11CD", "RGN11CD")]), by="LAD11CD",
   sort=F)
 
 # Join the period-specific rates per million person-days to LSOA boundaries
-plotmap <- merge(lsoashp, plotdat, by="LSOA11CD", sort=F)
+plotmap <- merge(lsoashp, tablsoa, by="LSOA11CD", sort=F)
 
 ################################################################################
 # MAP THE FIVE HEATWAVE PERIODS
@@ -86,8 +87,8 @@ plotmap <- merge(lsoashp, plotdat, by="LSOA11CD", sort=F)
 colval <- colorRampPalette(c("lightyellow","yellow","orange","red","red4"))(12)
 
 # Limit the colour scale at the 99th percentile
-plotlim <- unname(quantile(plotdat$rate, 0.99, na.rm=T))
-plotmax <- ceiling(max(plotdat$rate, na.rm=T))
+plotlim <- unname(quantile(tablsoa$rate, 0.99, na.rm=T))
+plotmax <- ceiling(max(tablsoa$rate, na.rm=T))
 
 # Define legend breaks and label the upper category with the maximum
 plotbreak <- pretty(c(0, plotlim), n=6)

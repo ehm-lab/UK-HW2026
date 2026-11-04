@@ -143,38 +143,33 @@ folder is excluded from version control.
 
 `03.output.R` creates numeric CSV and gzip-compressed CSV files without
 thousands separators or the 500 individual simulation draws. The compressed
-`.csv.gz` files can be read directly in R using `read.csv()`:
+LSOA files contain point estimates only and can be read directly in R using
+`read.csv()`.
 
 - `output/national_age_period.csv`: national results by age group and period,
-  including point estimates and eCIs;
+including point estimates and eCIs;
 - `output/region_age_period.csv`: regional results by age group and period,
-  including point estimates and eCIs;
+including point estimates and eCIs;
 - `output/national_75plus_period.csv`: national results for people aged 75
-  years or older, by period;
+years or older, by period, including point estimates and eCIs;
 - `output/region_75plus_period.csv`: regional results for people aged 75
-  years or older, by period;
+years or older, by period, including point estimates and eCIs;
 - `output/national_mort_daily.csv`: daily national mortality results by age
-  group, including point estimates and eCIs;
+group, including point estimates and eCIs;
 - `output/national_t2m_daily.csv`: the unweighted mean of LSOA-level daily
-  mean temperatures;
-- `output/lsoa_hw_period.csv`: all-age LSOA point estimates for each heatwave
-  period, used in Figure 2. The `rate` variable represents average daily
-  excess deaths per million person-days;
+mean temperatures;
 - `output/lsoa_age_hw_period.csv.gz`: age-specific and all-age LSOA point
-  estimates for each heatwave period. The `rate` variable represents average
-  daily excess deaths per million person-days. This file is gzip-compressed
-  because of its size;
-- `output/lsoa_study_period.csv`: all-age LSOA point estimates for the complete
-  study period. The `excess_deaths_per_million` variable represents cumulative
-  excess deaths per million population;
+estimates for each heatwave period. The all-age results are used in Figure 2.
+The `rate` variable represents average daily excess deaths per million
+person-days;
 - `output/lsoa_age_study_period.csv.gz`: age-specific and all-age LSOA point
-  estimates for the complete study period. The
-  `excess_deaths_per_million` variable represents cumulative excess deaths per
-  million population. This file is gzip-compressed because of its size;
+estimates for the complete study period. The
+`excess_deaths_per_million` variable represents cumulative excess deaths per
+million population;
 - `output/lad_study_period.csv`: all-age LAD point estimates for the complete
-  study period, obtained by aggregating the LSOA estimates. The
-  `excess_deaths_per_million` variable represents cumulative excess deaths per
-  million population.
+study period, obtained by aggregating the all-age LSOA estimates. The
+`excess_deaths_per_million` variable represents cumulative excess deaths per
+million population.
 
 ## Manuscript outputs
 
