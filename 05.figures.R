@@ -63,7 +63,7 @@ pfigure <- patchwork::wrap_plots(pmort, ptemp, patchwork::guide_area(), ncol=1,
   #     "summer 2026"))
 
 print(pfigure)
-ggsave("figures/Fig1_daily_ts.png",pfigure,width=11,height=8,dpi=1200)
+ggsave("figures/Fig1_daily_ts.png",pfigure,width=11,height=8,dpi=300)
 
 ################################################################################
 # PREPARE MAP DATA
@@ -111,4 +111,4 @@ pmap <- ggplot(plotmap) +
   guides(fill=guide_colorsteps(barwidth=14,barheight=0.6,title.position="top"))
 
 print(pmap)
-ggsave("figures/Fig2_map_excpd.png", pmap, width=14, height=9, dpi=1200)
+ggsave("figures/Fig2_map_excpd.png", pmap, width=14, height=9, dpi=300)
