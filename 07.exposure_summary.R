@@ -120,7 +120,7 @@ fig_tmax <- (ptmax_distribution/pgt30) + plot_layout(heights=c(1, 0.9))
 
 # print(fig_tmax)
 ggsave("figures/FigS1_tmax_extremes.png", plot=fig_tmax,
-  width=1800, height=1400, units="px", dpi=300, bg="white")
+  width=2000, height=1600, units="px", dpi=300, bg="white")
 
 # Print manuscript exposure statistics and remove the full input data
 print(exposure_summary)

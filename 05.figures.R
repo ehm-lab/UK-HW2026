@@ -61,7 +61,7 @@ pfigure <- patchwork::wrap_plots(pmort, ptemp, patchwork::guide_area(), ncol=1,
 
 # print(pfigure)
 ggsave("figures/Fig1_daily_ts.png", plot=pfigure,
-  width=1920, height=1400, units="px", dpi=300, bg="white")
+  width=2200, height=2000, units="px", dpi=300, bg="white")
 
 ################################################################################
 # PREPARE MAP DATA
