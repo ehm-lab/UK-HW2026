@@ -57,13 +57,11 @@ ptemp <- ggplot(tempday, aes(x=date, y=meantemp)) +
 
 # Combine and save the mortality and temperature panels
 pfigure <- patchwork::wrap_plots(pmort, ptemp, patchwork::guide_area(), ncol=1,
-  heights=c(2, 1, 0.15),guides="collect") #+
-  # patchwork::plot_annotation(
-  #   title=paste0("Heat-related excess mortality and national mean temperature, ",
-  #     "summer 2026"))
+  heights=c(2, 1, 0.15), guides="collect")
 
-print(pfigure)
-ggsave("figures/Fig1_daily_ts.png",pfigure,width=11,height=8,dpi=300)
+# print(pfigure)
+ggsave("figures/Fig1_daily_ts.png", plot=pfigure,
+  width=1920, height=1400, units="px", dpi=300, bg="white")
 
 ################################################################################
 # PREPARE MAP DATA
@@ -110,5 +108,6 @@ pmap <- ggplot(plotmap) +
     strip.text=element_text(face="bold", margin=margin(t=3, b=4))) +
   guides(fill=guide_colorsteps(barwidth=14,barheight=0.6,title.position="top"))
 
-print(pmap)
-ggsave("figures/Fig2_map_excpd.png", pmap, width=14, height=9, dpi=300)
+# print(pmap)
+ggsave("figures/Fig2_map_excpd.png", plot=pmap,
+  width=1920, height=1500, units="px", dpi=300, bg="white")

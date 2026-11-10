@@ -23,8 +23,7 @@ tmaxdat <- tmaxdat[date %in% dates]
 setorder(tmaxdat, LSOA11CD, date)
 
 # Check values, LSOA-date uniqueness and coverage
-if(anyNA(tmaxdat$tmax) || anyDuplicated(tmaxdat,
-  by=c("LSOA11CD", "date")))
+if(anyNA(tmaxdat$tmax) || anyDuplicated(tmaxdat, by=c("LSOA11CD", "date")))
   stop("Daily maximum-temperature data contain missing values or duplicate rows")
 
 if(!setequal(unique(tmaxdat$LSOA11CD), listlsoa) ||
@@ -119,9 +118,9 @@ pgt30 <- ggplot() +
 # Combine and save both panels
 fig_tmax <- (ptmax_distribution/pgt30) + plot_layout(heights=c(1, 0.9))
 
-print(fig_tmax)
-ggsave("figures/FigS1_tmax_extremes.png", fig_tmax,
-  width=9, height=7, units="in", dpi=1200)
+# print(fig_tmax)
+ggsave("figures/FigS1_tmax_extremes.png", plot=fig_tmax,
+  width=1800, height=1400, units="px", dpi=300, bg="white")
 
 # Print manuscript exposure statistics and remove the full input data
 print(exposure_summary)

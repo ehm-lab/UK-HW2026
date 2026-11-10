@@ -189,6 +189,14 @@ The `tables/` folder contains only the three manuscript-facing tables listed
 above. Intermediate results are retained as R objects or in `temp/` and are
 recreated by the analysis scripts when needed.
 
+## Interactive app
+
+The study results can also be explored using the
+[interactive app](https://ehm-lab.github.io/apps/uk-hw2026/).
+
+- [Source code](https://github.com/ehm-lab/UK-HW2026-app)
+- [Archived release (v1.0.0; DOI)](https://doi.org/10.5281/zenodo.24084712)
+
 ## Interpretation
 
 The results are modelled heat-related excess deaths rather than deaths
